@@ -1,0 +1,8 @@
+*.o
+*.BIN
+*.elf
+romdisk_boot
+*.img
+dc-tool_*
+*.kmg
+*.pkg
