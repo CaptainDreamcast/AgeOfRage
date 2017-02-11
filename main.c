@@ -8,6 +8,9 @@
 #include <tari/log.h>
 #include <tari/wrapper.h>
 
+#include "gamescreen.h"
+#include "system.h"
+
 KOS_INIT_FLAGS(INIT_DEFAULT);
 
 extern uint8 romdisk[];
@@ -28,7 +31,13 @@ void exitGame() {
 }
 
 void setMainFileSystem() {
-	setFileSystem("/pc");
+	#ifdef DEVELOP
+		setGameBaseFileSystem("/pc");
+	#else
+		setGameBaseFileSystem("/cd");
+	#endif
+
+	resetToGameBaseFileSystem();
 }
 
 int main() {
@@ -42,7 +51,8 @@ int main() {
     exitGame();
   }
 
-  
+  setCurrentLevelName("testlevel");
+  startScreenHandling(&GameScreen);
 
   exitGame();
 

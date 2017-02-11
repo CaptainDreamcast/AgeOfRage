@@ -1,11 +1,13 @@
 TARGET = 1ST_READ
 OBJS = main.o \
-romdisk.o
+romdisk.o gamescreen.o system.o stage.o enemies.o player.o collision.o
 OPTFLAGS=-O3 -fomit-frame-pointer -fno-delayed-branch -DDREAMCAST -Wall -Werror
 KOS_CFLAGS+= $(OPTFLAGS)
 KOS_ROMDISK_DIR = romdisk_boot
 
-all: clean build_images $(TARGET).elf
+all: $(TARGET).elf
+
+complete: clean build_images $(TARGET).elf
 
 build_images:
 	$(KOS_BASE)/utils/kmgenc/kmgenc -a4 $(wildcard assets/debug/*.png)
