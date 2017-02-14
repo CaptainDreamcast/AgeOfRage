@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <tari/file.h>
 #include <tari/datastructures.h>
+#include <tari/wrapper.h>
+#include <tari/input.h>
+
 
 #include "system.h"
 #include "stage.h"
@@ -21,7 +24,7 @@ void setCurrentLevelName(char* name) {
 static void loadGameScreen() {
 	char imgpath[100];
 	sprintf(imgpath, "/assets/level/%s.img", gData.currentLevelName);
-	mountRomdisk("/assets/level/%s.img", "/LEVEL");
+	mountRomdisk(imgpath, "/LEVEL");
 	setFileSystem("/LEVEL");
 
 	
@@ -49,6 +52,10 @@ static void drawGameScreen() {
 
 static Screen* getGameScreenNextScreen() {
 	
+	if(hasPressedAbortFlank()) {
+		abortScreenHandling();
+	}
+
 	return NULL;
 }
 

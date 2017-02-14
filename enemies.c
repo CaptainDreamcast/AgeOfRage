@@ -8,6 +8,7 @@
 #include <tari/memoryhandler.h>
 #include <tari/physicshandler.h>
 #include <tari/collisionhandler.h>
+#include <tari/system.h>
 
 #include <tari/log.h>
 
@@ -89,6 +90,7 @@ static ScriptPosition loadSingleEnemyType(void* caller, ScriptPosition pos) {
 	} else {
 		logError("Unrecognized token");
 		logErrorString(word);
+		abortSystem();
 	}
 
 	return pos;
@@ -106,6 +108,10 @@ static ScriptPosition loader(void* caller, ScriptPosition pos) {
 		executeOnScriptRegion(enemyRegion, loadSingleEnemyType, enemyType);
 		vector_push_back_owned(&gData.enemyTypes, enemyType);
 		pos = getPositionAfterScriptRegion(enemyRegion);
+	} else {
+		logError("Unrecognized token");
+		logErrorString(word);
+		abortSystem();
 	}
 
 

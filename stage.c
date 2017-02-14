@@ -6,6 +6,8 @@
 #include <tari/geometry.h>
 #include <tari/stagehandler.h>
 #include <tari/script.h>
+#include <tari/log.h>
+#include <tari/system.h>
 
 #include "enemies.h"
 #include "player.h"
@@ -53,7 +55,7 @@ static ScriptPosition loader(void* caller, ScriptPosition position) {
 	if(!strcmp(word, "BACKGROUND1")) {
 		Position texturePosition;
 		position = loadBackgroundElementWithoutAnimation(position, path, &texturePosition);
-		
+
 		addBackgroundElement(gData.backgroundID1, texturePosition, path, createOneFrameAnimation());
 	} else if(!strcmp(word, "BACKGROUND_ANIMATION1")) {
 		Position texturePosition;
@@ -74,7 +76,11 @@ static ScriptPosition loader(void* caller, ScriptPosition position) {
 		position = loadBackgroundElementAnimation(position, &animation);
 		
 		addBackgroundElement(gData.backgroundID2, texturePosition, path, animation);
-	}  
+	}   else {
+		logError("Unrecognized token.");
+		logErrorString(word);
+		abortSystem();
+	}
 
 	return position;
 }

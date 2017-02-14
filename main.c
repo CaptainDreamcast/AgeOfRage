@@ -51,7 +51,7 @@ int main() {
     exitGame();
   }
 
-  setCurrentLevelName("testlevel");
+  setCurrentLevelName("LEVEL1");
   startScreenHandling(&GameScreen);
 
   exitGame();

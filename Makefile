@@ -5,21 +5,39 @@ OPTFLAGS=-O3 -fomit-frame-pointer -fno-delayed-branch -DDREAMCAST -Wall -Werror
 KOS_CFLAGS+= $(OPTFLAGS)
 KOS_ROMDISK_DIR = romdisk_boot
 
-all: $(TARGET).elf
+#all: $(TARGET).elf #problematic when workling with libtari
+
+all: complete
 
 complete: clean build_images $(TARGET).elf
 
-build_images:
+
+
+build_images: copy_debug genlevels
+
+copy_debug:
 	$(KOS_BASE)/utils/kmgenc/kmgenc -a4 $(wildcard assets/debug/*.png)
-	tools/KOMPRESSOR/kompressor $(wildcard assets/debug/*.kmg)
+	find assets/debug -name '*.kmg' | xargs tools/KOMPRESSOR/kompressor
 	mkdir romdisk_boot
 	mkdir romdisk_boot/fonts
 	cp assets/fonts/* romdisk_boot/fonts
 	mkdir romdisk_boot/debug
 	cp assets/debug/*.pkg romdisk_boot/debug
-
 	mkdir filesystem
+	mkdir filesystem/assets
+
+genlevels:
+	mkdir filesystem/assets/level
+	rm -r -f tmp_level
 	
+	mkdir tmp_level
+	cp -r assets/level1/* tmp_level
+	find tmp_level -name '*.png' | xargs $(KOS_BASE)/utils/kmgenc/kmgenc -a4 
+	find tmp_level -name '*.kmg' | xargs tools/KOMPRESSOR/kompressor
+	find tmp_level -name '*.png' | xargs rm -f
+	find tmp_level -name '*.kmg' | xargs rm -f
+	$(KOS_BASE)/utils/genromfs/genromfs -d tmp_level  -f filesystem/assets/level/LEVEL1.img	
+	rm -r -f tmp_level
 	
 
 clean:
