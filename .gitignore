@@ -6,3 +6,4 @@ romdisk_boot
 dc-tool_*
 *.kmg
 *.pkg
+filesystem

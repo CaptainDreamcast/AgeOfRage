@@ -5,6 +5,7 @@
 #include <tari/datastructures.h>
 #include <tari/wrapper.h>
 #include <tari/input.h>
+#include <tari/memoryhandler.h>
 
 
 #include "system.h"
@@ -22,12 +23,14 @@ void setCurrentLevelName(char* name) {
 }
 
 static void loadGameScreen() {
-	char imgpath[100];
-	sprintf(imgpath, "/assets/level/%s.img", gData.currentLevelName);
-	mountRomdisk(imgpath, "/LEVEL");
-	setFileSystem("/LEVEL");
-
 	
+	char imgpath[100];
+
+	sprintf(imgpath, "/assets/level/%s", gData.currentLevelName);
+	setFileSystem("/pc/assets/level/level1");
+
+	//printDirectory("scripts");
+
 	loadCollision();
 	loadPlayer();
 	loadEnemies();

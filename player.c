@@ -6,11 +6,25 @@
 #include <tari/texture.h>
 #include <tari/script.h>
 #include <tari/physicshandler.h>
+#include <tari/input.h>
+
+#include "collision.h"
+
+typedef enum {
+	STATE_IDLE, 
+	STATE_WALKING,
+	STATE_
+		
+	
+
+} State;
 
 static struct {
 
 	int physicsID;	
 	Position* mPosition;
+	Velocity* mVelocity;
+	Position mCenter;
 
 	Animation idleAnimation;
 	TextureData idleTextures[10];
@@ -20,6 +34,11 @@ static struct {
 	TextureData walkingTextures[10];
 
 	int animationID;
+
+	State state;
+	int direction;
+	
+	CollisionData collisionData;
 } gData;
 
 
@@ -56,7 +75,13 @@ static ScriptPosition loader(void* caller, ScriptPosition position) {
 		position = getNextScriptDouble(position, &pos.z);
 		gData.physicsID = addToPhysicsHandler(pos);
 		PhysicsObject* physics = getPhysicsFromHandler(gData.physicsID);
+		
 		gData.mPosition = &physics->mPosition;
+		gData.mVelocity = &physics->mVelocity;
+	} else if(!strcmp(word, "CENTER_X")) {
+		position = getNextScriptDouble(position, &gData.mCenter.x);
+		gData.mCenter.y = 0;
+		gData.mCenter.z = 0;		
 	} else if(!strcmp(word, "IDLE_ANIMATION")) {
 		position = loadTextureDataAndAnimation(position, gData.idleTextures, &gData.idleAnimation);
 	} else if(!strcmp(word, "WALKING_ANIMATION")) {
@@ -74,12 +99,56 @@ void loadPlayer() {
 	Script script = loadScript("/scripts/player.txt");
 	ScriptRegion r = getScriptRegion(script, "LOAD");
 	executeOnScriptRegion(r, loader, NULL);
+	gData.state = STATE_IDLE;
+	gData.direction = 0;
+	gData.collisionData = makeHittableCollisionData();
+
 	gData.animationID = playAnimationLoop(makePosition(0,0,0), gData.idleTextures, gData.idleAnimation, makeRectangleFromTexture(gData.idleTextures[0]));
 	setAnimationBasePositionReference(gData.animationID, gData.mPosition);
 }
 
+static void invert() {
+	gData.direction *= -1;
+	setAnimationScale(gData.animationID, makePosition(gData.direction, 0, 0), gData.mCenter);
+}
+
+static void checkInverted() {
+	if(gData.direction && gData.mVelocity->x < 0) invert();
+	if(!gData.direction && gData.mVelocity->x > 0) invert();
+}
+
+static void setWalking() {
+	gData.state = STATE_WALKING;
+	changeAnimation(gData.animationID, gData.walkingTextures, gData.walkingAnimation, makeRectangleFromTexture(gData.walkingTextures[0]));
+}
+
+static void setIdle() {
+	gData.state = STATE_IDLE;
+	changeAnimation(gData.animationID, gData.idleTextures, gData.idleAnimation, makeRectangleFromTexture(gData.idleTextures[0]));
+}
+
+static void checkMovement() {
+	if(gData.state != STATE_IDLE && gData.state != STATE_WALKING) return;
+	
+	if(hasPressedLeft()) {
+		addAccelerationToHandledPhysics(gData.physicsID, makeAcceleration(-1, 0, 0));
+		setWalking();
+	}
+
+	if(hasPressedRight()) {
+		addAccelerationToHandledPhysics(gData.physicsID, makeAcceleration(-1, 0, 0));
+		setWalking();
+	}
+
+	if(vecLength(*gData.mVelocity) < 1e-6) {
+		setIdle();
+	}
+
+}
+
 void updatePlayer() {
- // TODO
+	checkInverted();
+	checkMovement();
 }
 
 

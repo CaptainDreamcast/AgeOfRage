@@ -55,19 +55,16 @@ static ScriptPosition loader(void* caller, ScriptPosition position) {
 	if(!strcmp(word, "BACKGROUND1")) {
 		Position texturePosition;
 		position = loadBackgroundElementWithoutAnimation(position, path, &texturePosition);
-
 		addBackgroundElement(gData.backgroundID1, texturePosition, path, createOneFrameAnimation());
 	} else if(!strcmp(word, "BACKGROUND_ANIMATION1")) {
 		Position texturePosition;
 		position = loadBackgroundElementWithoutAnimation(position, path, &texturePosition);
 		Animation animation;		
 		position = loadBackgroundElementAnimation(position, &animation);
-		
 		addBackgroundElement(gData.backgroundID1, texturePosition, path, animation);
 	} else if(!strcmp(word, "BACKGROUND2")) {
 		Position texturePosition;
 		position = loadBackgroundElementWithoutAnimation(position, path, &texturePosition);
-		
 		addBackgroundElement(gData.backgroundID2, texturePosition, path, createOneFrameAnimation());
 	}  else if(!strcmp(word, "BACKGROUND_ANIMATION2")) {
 		Position texturePosition;

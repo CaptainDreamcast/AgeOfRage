@@ -28,16 +28,16 @@ copy_debug:
 
 genlevels:
 	mkdir filesystem/assets/level
-	rm -r -f tmp_level
 	
-	mkdir tmp_level
-	cp -r assets/level1/* tmp_level
-	find tmp_level -name '*.png' | xargs $(KOS_BASE)/utils/kmgenc/kmgenc -a4 
-	find tmp_level -name '*.kmg' | xargs tools/KOMPRESSOR/kompressor
-	find tmp_level -name '*.png' | xargs rm -f
-	find tmp_level -name '*.kmg' | xargs rm -f
-	$(KOS_BASE)/utils/genromfs/genromfs -d tmp_level  -f filesystem/assets/level/LEVEL1.img	
-	rm -r -f tmp_level
+	mkdir filesystem/assets/level/level1
+	cp -r assets/level1/* filesystem/assets/level/level1
+	
+	find filesystem/assets/level -name '*.png' | xargs $(KOS_BASE)/utils/kmgenc/kmgenc -a4 
+	find filesystem/assets/level -name '*.kmg' | xargs tools/KOMPRESSOR/kompressor
+	find filesystem/assets/level -name '*.png' | xargs rm -f
+	find filesystem/assets/level -name '*.kmg' | xargs rm -f
+	#$(KOS_BASE)/utils/genromfs/genromfs -a 256 -d tmp_level  -f filesystem/assets/level/LEVEL1.img	
+	#rm -r -f tmp_level
 	
 
 clean:

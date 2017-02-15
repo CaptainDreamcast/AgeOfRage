@@ -1,5 +1,7 @@
 #include "collision.h"
 
+#include <stdio.h>
+
 #include <tari/collisionhandler.h>
 
 static struct {
@@ -16,7 +18,7 @@ void loadCollision() {
 	gData.playerCollisionList = addCollisionListToHandler();
 	gData.enemyAttackCollisionList = addCollisionListToHandler();
 	gData.playerAttackCollisionList = addCollisionListToHandler();
-	
+
 	addCollisionHandlerCheck(gData.enemyCollisionList, gData.playerAttackCollisionList);
 	addCollisionHandlerCheck(gData.playerCollisionList, gData.enemyAttackCollisionList);
 }
