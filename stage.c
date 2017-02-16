@@ -24,7 +24,7 @@ static struct {
 	int isBackgroundScrolling;
 
 	int isOver;
-	Position screenPosition;
+	Position* screenPosition;
 
 } gData;
 
@@ -83,7 +83,7 @@ static ScriptPosition loader(void* caller, ScriptPosition position) {
 }
 
 void loadStage() {
-	gData.backgroundID1 = addScrollingBackground(0.5, 1);
+	gData.backgroundID1 = addScrollingBackground(1, 1);
 	gData.backgroundID2 = addScrollingBackground(0.75, 2);
 	gData.groundID = addScrollingBackground(1, 3);
 
@@ -91,7 +91,7 @@ void loadStage() {
 	gData.isBackgroundScrolling = 1;
 
 	gData.isOver = 0;
-	gData.screenPosition = makePosition(0,0,0);
+	gData.screenPosition = getScrollingBackgroundPositionReference(gData.groundID);
 
 	gData.script = loadScript("/scripts/stage.txt");
 	ScriptRegion r = getScriptRegion(gData.script, "LOAD");
@@ -125,7 +125,7 @@ static void updateScript() {
 		int screenPositionX;
 		ScriptPosition pos = getNextScriptInteger(gData.scriptPosition, &screenPositionX);
 		
-		if(!gData.screenPosition.x < screenPositionX) return;
+		if(gData.screenPosition->x < screenPositionX) return;
 		gData.scriptPosition = pos;
 
 		char word[100];
@@ -139,7 +139,9 @@ static void updateScript() {
 			int enemyType;
 			gData.scriptPosition = getNextScriptDouble(gData.scriptPosition, &enemyPosition.x);
 			gData.scriptPosition = getNextScriptDouble(gData.scriptPosition, &enemyPosition.y);
+			gData.scriptPosition = getNextScriptDouble(gData.scriptPosition, &enemyPosition.z);
 			gData.scriptPosition = getNextScriptInteger(gData.scriptPosition, &enemyType);
+			enemyPosition = vecAdd(enemyPosition, *gData.screenPosition);
 			spawnEnemy(enemyType, enemyPosition);	
 		}
 
@@ -151,8 +153,8 @@ static void updateStageMovement() {
 	if(!gData.isBackgroundScrolling) return;
 
 	Position p = getRealScreenPosition(gData.groundID, getPlayerPosition());
-	if(p.x >= 540) {
-		scrollBackgroundRight(3);
+	if(p.x >= 350) {
+		scrollBackgroundRight(0.5);
 	}
 }
 

@@ -28,12 +28,18 @@ typedef struct {
 	int health;
 	Collider col;
 
+	double maxVelocity;
+	Vector3D dragCoefficient;
+	
+	Position center;
+
 } EnemyType;
 
 typedef struct {
 
 	int physicsID;
 	int collisionID;
+	int animationID;
 	int health;
 	CollisionData collisionData;
 
@@ -87,7 +93,17 @@ static ScriptPosition loadSingleEnemyType(void* caller, ScriptPosition pos) {
 		pos = getNextScriptDouble(pos, &rect.mBottomRight.y);
 		pos = getNextScriptDouble(pos, &rect.mBottomRight.z);
 		enemyType->col = makeColliderFromRect(rect);
-	} else {
+	} else if(!strcmp(word, "MAX_VELOCITY")) {
+		pos = getNextScriptDouble(pos, &enemyType->maxVelocity);
+	} else if(!strcmp(word, "DRAG_COEFFICIENT")) {
+		pos = getNextScriptDouble(pos, &enemyType->dragCoefficient.x);
+		pos = getNextScriptDouble(pos, &enemyType->dragCoefficient.y);
+		enemyType->dragCoefficient.z = 0;
+	} else if(!strcmp(word, "CENTER_X")) {
+		pos = getNextScriptDouble(pos, &enemyType->center.x);
+		enemyType->center.y = 0;
+		enemyType->center.z = 0;
+	}else {
 		logError("Unrecognized token");
 		logErrorString(word);
 		abortSystem();
@@ -155,9 +171,19 @@ void spawnEnemy(int type, Position pos) {
 
 	enemy->health = enemyType->health;
 	enemy->physicsID = addToPhysicsHandler(pos);
+	setHandledPhysicsMaxVelocity(enemy->physicsID, enemyType->maxVelocity);
+	setHandledPhysicsDragCoefficient(enemy->physicsID, enemyType->dragCoefficient);
+
 	PhysicsObject* physics = getPhysicsFromHandler(enemy->physicsID);
+
 	enemy->collisionData = makeHittableCollisionData();
 	enemy->collisionID = addColliderToCollisionHandler(getEnemyCollisionListID(), &physics->mPosition, enemyType->col, enemyHitCB, enemy, &enemy->collisionData);
+
+	enemy->animationID = playAnimationLoop(makePosition(0,0,0), enemyType->idleTextures, enemyType->idleAnimation, makeRectangleFromTexture(enemyType->idleTextures[0]));
+	setAnimationBasePositionReference(enemy->animationID, &physics->mPosition);
+	setAnimationScreenPositionReference(enemy->animationID, gData.screenPositionReference);
+	setAnimationCenter(enemy->animationID, enemyType->center);
+
 	list_push_front_owned(&gData.activeEnemies, enemy);
 }
 

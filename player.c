@@ -81,7 +81,8 @@ static ScriptPosition loader(void* caller, ScriptPosition position) {
 	} else if(!strcmp(word, "CENTER_X")) {
 		position = getNextScriptDouble(position, &gData.mCenter.x);
 		gData.mCenter.y = 0;
-		gData.mCenter.z = 0;		
+		gData.mCenter.z = 0;	
+		
 	} else if(!strcmp(word, "IDLE_ANIMATION")) {
 		position = loadTextureDataAndAnimation(position, gData.idleTextures, &gData.idleAnimation);
 	} else if(!strcmp(word, "WALKING_ANIMATION")) {
@@ -100,30 +101,37 @@ void loadPlayer() {
 	ScriptRegion r = getScriptRegion(script, "LOAD");
 	executeOnScriptRegion(r, loader, NULL);
 	gData.state = STATE_IDLE;
-	gData.direction = 0;
+	gData.direction = 1;
 	gData.collisionData = makeHittableCollisionData();
 
 	gData.animationID = playAnimationLoop(makePosition(0,0,0), gData.idleTextures, gData.idleAnimation, makeRectangleFromTexture(gData.idleTextures[0]));
 	setAnimationBasePositionReference(gData.animationID, gData.mPosition);
+	setAnimationCenter(gData.animationID, gData.mCenter);
+
+	setHandledPhysicsMaxVelocity(gData.physicsID, 3);
+	setHandledPhysicsDragCoefficient(gData.physicsID, makePosition(0.2, 0.2, 0));
 }
 
 static void invert() {
 	gData.direction *= -1;
-	setAnimationScale(gData.animationID, makePosition(gData.direction, 0, 0), gData.mCenter);
+	inverseAnimationVertical(gData.animationID);
 }
 
 static void checkInverted() {
-	if(gData.direction && gData.mVelocity->x < 0) invert();
-	if(!gData.direction && gData.mVelocity->x > 0) invert();
+	if(gData.direction == 1 && gData.mVelocity->x < 0) invert();
+	if(gData.direction == -1 && gData.mVelocity->x > 0) invert();
 }
 
 static void setWalking() {
+	if(gData.state == STATE_WALKING) return;
 	gData.state = STATE_WALKING;
 	changeAnimation(gData.animationID, gData.walkingTextures, gData.walkingAnimation, makeRectangleFromTexture(gData.walkingTextures[0]));
 }
 
 static void setIdle() {
+	if(gData.state == STATE_IDLE) return;
 	gData.state = STATE_IDLE;
+	*gData.mVelocity = makePosition(0,0,0);
 	changeAnimation(gData.animationID, gData.idleTextures, gData.idleAnimation, makeRectangleFromTexture(gData.idleTextures[0]));
 }
 
@@ -136,11 +144,21 @@ static void checkMovement() {
 	}
 
 	if(hasPressedRight()) {
-		addAccelerationToHandledPhysics(gData.physicsID, makeAcceleration(-1, 0, 0));
+		addAccelerationToHandledPhysics(gData.physicsID, makeAcceleration(1, 0, 0));
 		setWalking();
 	}
 
-	if(vecLength(*gData.mVelocity) < 1e-6) {
+	if(hasPressedUp()) {
+		addAccelerationToHandledPhysics(gData.physicsID, makeAcceleration(0, -1, 0));
+		setWalking();
+	}
+
+	if(hasPressedDown()) {
+		addAccelerationToHandledPhysics(gData.physicsID, makeAcceleration(0, 1, 0));
+		setWalking();
+	}
+
+	if(vecLength(*gData.mVelocity) < 0.1) {
 		setIdle();
 	}
 

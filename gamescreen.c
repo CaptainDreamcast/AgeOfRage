@@ -29,13 +29,11 @@ static void loadGameScreen() {
 	sprintf(imgpath, "/assets/level/%s", gData.currentLevelName);
 	setFileSystem("/pc/assets/level/level1");
 
-	//printDirectory("scripts");
-
 	loadCollision();
 	loadPlayer();
 	loadEnemies();
 	loadStage();
-	
+
 }
 
 static void unloadGameScreen() {
