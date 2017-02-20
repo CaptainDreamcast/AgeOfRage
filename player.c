@@ -7,16 +7,17 @@
 #include <tari/script.h>
 #include <tari/physicshandler.h>
 #include <tari/input.h>
+#include <tari/collision.h>
+#include <tari/memoryhandler.h>
+#include <tari/datastructures.h>
+#include <tari/collisionanimation.h>
 
 #include "collision.h"
 
 typedef enum {
 	STATE_IDLE, 
 	STATE_WALKING,
-	STATE_
-		
-	
-
+	STATE_WEAK_PUNCH
 } State;
 
 static struct {
@@ -33,14 +34,33 @@ static struct {
 	Animation walkingAnimation;
 	TextureData walkingTextures[10];
 
+	Animation weakPunchAnimation;
+	TextureData weakPunchTextures[10];
+
+	Animation strongPunchAnimation;
+	TextureData strongPunchTextures[10];
+
+	Animation hitAnimation;
+	TextureData hitTextures[10];
+
+	CollisionAnimation weakPunchCollisionAnimation;
+	CollisionData weakPunchCollisionData;
+
 	int animationID;
+	int collisionID;
 
 	State state;
 	int direction;
 	
+	Collider collider;
 	CollisionData collisionData;
+
+	int collisionAnimationID;
 } gData;
 
+
+
+static void playerHitCB(void* tCaller, void* tCollisionData);
 
 static ScriptPosition loadTextureDataAndAnimation(ScriptPosition position, TextureData* textureData, Animation* animation) {	
 	char name[100];
@@ -63,6 +83,26 @@ static ScriptPosition loadTextureDataAndAnimation(ScriptPosition position, Textu
 	return position;
 }
 
+
+static ScriptPosition loadSingleCollisionAnimation(void* caller, ScriptPosition position) {
+	CollisionAnimation* cAnimation = caller;
+
+	Position topLeft;
+	Position bottomRight;
+	position = getNextScriptDouble(position, &topLeft.x);
+	position = getNextScriptDouble(position, &topLeft.y);
+	position = getNextScriptDouble(position, &topLeft.z);
+	position = getNextScriptDouble(position, &bottomRight.x);
+	position = getNextScriptDouble(position, &bottomRight.y);
+	position = getNextScriptDouble(position, &bottomRight.z);
+
+	CollisionRect rect = makeCollisionRect(topLeft, bottomRight);
+	Collider* col = allocMemory(sizeof(Collider));
+	*col = makeColliderFromRect(rect);
+	vector_push_back_owned(&cAnimation->mFrames, col);
+
+	return position;
+}
 
 static ScriptPosition loader(void* caller, ScriptPosition position) {
 	char word[100];	
@@ -87,6 +127,27 @@ static ScriptPosition loader(void* caller, ScriptPosition position) {
 		position = loadTextureDataAndAnimation(position, gData.idleTextures, &gData.idleAnimation);
 	} else if(!strcmp(word, "WALKING_ANIMATION")) {
 		position = loadTextureDataAndAnimation(position, gData.walkingTextures, &gData.walkingAnimation);
+	} else if(!strcmp(word, "PUNCH_ANIMATION_1")) {
+	 	position = loadTextureDataAndAnimation(position, gData.weakPunchTextures, &gData.weakPunchAnimation);
+	} else if(!strcmp(word, "PUNCH_COLLISION_ANIMATION_1")) {
+	 	ScriptRegion collisionRegion = getScriptRegionAtPosition(position);
+		gData.weakPunchCollisionAnimation = makeEmptyCollisionAnimation();
+		executeOnScriptRegion(collisionRegion, loadSingleCollisionAnimation, &gData.weakPunchCollisionAnimation);
+		gData.weakPunchCollisionAnimation.mAnimation = gData.weakPunchAnimation;
+		position = getPositionAfterScriptRegion(position.mRegion, collisionRegion);
+	}else if(!strcmp(word, "PUNCH_ANIMATION_2")) {
+	 	position = loadTextureDataAndAnimation(position, gData.strongPunchTextures, &gData.strongPunchAnimation);
+	} else if(!strcmp(word, "HIT_ANIMATION")) {
+	 	position = loadTextureDataAndAnimation(position, gData.hitTextures, &gData.hitAnimation);
+	} else if(!strcmp(word, "COLLISION_DATA")) {
+		CollisionRect rect;
+	 	position = getNextScriptDouble(position, &rect.mTopLeft.x);
+		position = getNextScriptDouble(position, &rect.mTopLeft.y);
+		position = getNextScriptDouble(position, &rect.mTopLeft.z);
+		position = getNextScriptDouble(position, &rect.mBottomRight.x);
+		position = getNextScriptDouble(position, &rect.mBottomRight.y);
+		position = getNextScriptDouble(position, &rect.mBottomRight.z);
+		gData.collider = makeColliderFromRect(rect);
 	} else {
 		logError("Unknown token.");
 		logErrorString(word);
@@ -103,18 +164,31 @@ void loadPlayer() {
 	gData.state = STATE_IDLE;
 	gData.direction = 1;
 	gData.collisionData = makeHittableCollisionData();
+	gData.collisionID = addColliderToCollisionHandler(getPlayerAttackCollisionListID(), gData.mPosition, gData.collider, playerHitCB, NULL, &gData.collisionData);
+	gData.collisionAnimationID = -1;
+
+	gData.weakPunchCollisionData = makePunchCollisionData(50, makePosition(0,0,0));	
 
 	gData.animationID = playAnimationLoop(makePosition(0,0,0), gData.idleTextures, gData.idleAnimation, makeRectangleFromTexture(gData.idleTextures[0]));
 	setAnimationBasePositionReference(gData.animationID, gData.mPosition);
 	setAnimationCenter(gData.animationID, gData.mCenter);
 
-	setHandledPhysicsMaxVelocity(gData.physicsID, 3);
+	setHandledPhysicsMaxVelocity(gData.physicsID, 1.5);
 	setHandledPhysicsDragCoefficient(gData.physicsID, makePosition(0.2, 0.2, 0));
+}
+
+
+static void playerHitCB(void* tCaller, void* tCollisionData) {
+	(void) tCaller;
+	(void) tCollisionData;
 }
 
 static void invert() {
 	gData.direction *= -1;
 	inverseAnimationVertical(gData.animationID);
+	if(gData.collisionAnimationID != -1) {
+		invertCollisionAnimationVertical(gData.collisionAnimationID);
+	}
 }
 
 static void checkInverted() {
@@ -134,6 +208,8 @@ static void setIdle() {
 	*gData.mVelocity = makePosition(0,0,0);
 	changeAnimation(gData.animationID, gData.idleTextures, gData.idleAnimation, makeRectangleFromTexture(gData.idleTextures[0]));
 }
+
+
 
 static void checkMovement() {
 	if(gData.state != STATE_IDLE && gData.state != STATE_WALKING) return;
@@ -164,9 +240,46 @@ static void checkMovement() {
 
 }
 
+static void punchHitSomething(void* tCaller, void* tCollisionData) {
+	(void) tCaller;
+	(void) tCollisionData;
+}
+
+static void weakPunchFinished(void* caller) {
+	removeAnimationCB(gData.animationID);
+	gData.collisionAnimationID = -1;
+	setIdle();
+}
+
+static void setWeakPunch() {
+	gData.state = STATE_WEAK_PUNCH;
+	changeAnimation(gData.animationID, gData.weakPunchTextures, gData.weakPunchAnimation, makeRectangleFromTexture(gData.weakPunchTextures[0]));
+	setAnimationCB(gData.animationID, weakPunchFinished);
+	gData.collisionAnimationID = addHandledCollisionAnimation(getPlayerAttackCollisionListID(), gData.mPosition, gData.weakPunchCollisionAnimation, punchHitSomething, NULL, &gData.weakPunchCollisionData);
+	setCollisionAnimationCenter(gData.collisionAnimationID, gData.mCenter);
+	if(gData.direction == -1) {
+		invertCollisionAnimationVertical(gData.collisionAnimationID);
+	}
+}
+
+static void checkWeakPunch()  {
+	if(gData.state != STATE_IDLE && gData.state != STATE_WALKING) return;
+
+	if(hasPressedXFlank()) {
+		setWeakPunch();
+	}
+}
+
+static void checkPunch() {
+	checkWeakPunch();	
+
+
+}
+
 void updatePlayer() {
 	checkInverted();
 	checkMovement();
+	checkPunch();
 }
 
 

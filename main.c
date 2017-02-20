@@ -7,6 +7,7 @@
 #include <tari/drawing.h>
 #include <tari/log.h>
 #include <tari/wrapper.h>
+#include <tari/system.h>
 
 #include "gamescreen.h"
 #include "system.h"
@@ -42,14 +43,16 @@ void setMainFileSystem() {
 
 int main() {
 
-  initTariWrapperWithDefaultFlags();
-  setMainFileSystem();
-
   log("Check framerate");
   FramerateSelectReturnType framerateReturnType = selectFramerate();
   if (framerateReturnType == FRAMERATE_SCREEN_RETURN_ABORT) {
     exitGame();
   }
+
+  setScreenSize(320, 240);
+
+  initTariWrapperWithDefaultFlags();
+  setMainFileSystem();
 
   setCurrentLevelName("LEVEL1");
   startScreenHandling(&GameScreen);

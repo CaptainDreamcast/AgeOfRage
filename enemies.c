@@ -123,7 +123,7 @@ static ScriptPosition loader(void* caller, ScriptPosition pos) {
 		EnemyType* enemyType = allocMemory(sizeof(EnemyType));
 		executeOnScriptRegion(enemyRegion, loadSingleEnemyType, enemyType);
 		vector_push_back_owned(&gData.enemyTypes, enemyType);
-		pos = getPositionAfterScriptRegion(enemyRegion);
+		pos = getPositionAfterScriptRegion(pos.mRegion, enemyRegion);
 	} else {
 		logError("Unrecognized token");
 		logErrorString(word);

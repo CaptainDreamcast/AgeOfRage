@@ -6,7 +6,7 @@
 #include <tari/wrapper.h>
 #include <tari/input.h>
 #include <tari/memoryhandler.h>
-
+#include <tari/collisionhandler.h>
 
 #include "system.h"
 #include "stage.h"
@@ -29,10 +29,14 @@ static void loadGameScreen() {
 	sprintf(imgpath, "/assets/level/%s", gData.currentLevelName);
 	setFileSystem("/pc/assets/level/level1");
 
+	activateCollisionHandlerDebugMode();
+
 	loadCollision();
 	loadPlayer();
 	loadEnemies();
 	loadStage();
+
+	
 
 }
 

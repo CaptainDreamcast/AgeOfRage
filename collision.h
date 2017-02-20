@@ -10,7 +10,9 @@ typedef struct {
 
 void loadCollision();
 CollisionData makeHittableCollisionData();
+CollisionData makePunchCollisionData(int strength, Acceleration force);
 int getEnemyCollisionListID();
+int getPlayerAttackCollisionListID();
 
 
 #endif

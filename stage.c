@@ -8,6 +8,7 @@
 #include <tari/script.h>
 #include <tari/log.h>
 #include <tari/system.h>
+#include <tari/collisionhandler.h>
 
 #include "enemies.h"
 #include "player.h"
@@ -102,6 +103,7 @@ void loadStage() {
 	Position* p = getScrollingBackgroundPositionReference(gData.groundID);
 	setPlayerScreenPositionReference(p);
 	setEnemiesScreenPositionReference(p);
+	setCollisionHandlerDebuggingScreenPositionReference(p);
 }
 
 static void updateScript() {
@@ -153,8 +155,8 @@ static void updateStageMovement() {
 	if(!gData.isBackgroundScrolling) return;
 
 	Position p = getRealScreenPosition(gData.groundID, getPlayerPosition());
-	if(p.x >= 350) {
-		scrollBackgroundRight(0.5);
+	if(p.x >= 175) {
+		scrollBackgroundRight(0.25);
 	}
 }
 

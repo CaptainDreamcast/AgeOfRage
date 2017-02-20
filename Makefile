@@ -36,6 +36,7 @@ genlevels:
 	find filesystem/assets/level -name '*.kmg' | xargs tools/KOMPRESSOR/kompressor
 	find filesystem/assets/level -name '*.png' | xargs rm -f
 	find filesystem/assets/level -name '*.kmg' | xargs rm -f
+	find filesystem/assets/level -name '*.xcf' | xargs rm -f
 	#$(KOS_BASE)/utils/genromfs/genromfs -a 256 -d tmp_level  -f filesystem/assets/level/LEVEL1.img	
 	#rm -r -f tmp_level
 	

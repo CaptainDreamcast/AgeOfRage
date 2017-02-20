@@ -30,6 +30,17 @@ CollisionData makeHittableCollisionData() {
 	return ret;
 }
 
+CollisionData makePunchCollisionData(int strength, Acceleration force) {
+	CollisionData ret;
+	ret.force = force;
+	ret.strength = strength;
+	return ret;
+}
+
 int getEnemyCollisionListID() {
 	return gData.enemyCollisionList;
+}
+
+int getPlayerAttackCollisionListID() {
+	return gData.playerAttackCollisionList;
 }
