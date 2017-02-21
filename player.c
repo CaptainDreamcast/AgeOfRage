@@ -11,13 +11,15 @@
 #include <tari/memoryhandler.h>
 #include <tari/datastructures.h>
 #include <tari/collisionanimation.h>
+#include <tari/timer.h>
 
 #include "collision.h"
 
 typedef enum {
 	STATE_IDLE, 
 	STATE_WALKING,
-	STATE_WEAK_PUNCH
+	STATE_WEAK_PUNCH,
+	STATE_STRONG_PUNCH,
 } State;
 
 static struct {
@@ -46,12 +48,17 @@ static struct {
 	CollisionAnimation weakPunchCollisionAnimation;
 	CollisionData weakPunchCollisionData;
 
+	CollisionAnimation strongPunchCollisionAnimation;
+	CollisionData strongPunchCollisionData;
+
 	int animationID;
 	int collisionID;
 
 	State state;
 	int direction;
 	
+	int comboState;
+
 	Collider collider;
 	CollisionData collisionData;
 
@@ -104,6 +111,15 @@ static ScriptPosition loadSingleCollisionAnimation(void* caller, ScriptPosition 
 	return position;
 }
 
+static ScriptPosition loadPunchCollisionAnimation(ScriptPosition position, CollisionAnimation* collisionAnimation, Animation animation) {
+	ScriptRegion collisionRegion = getScriptRegionAtPosition(position);
+	*collisionAnimation = makeEmptyCollisionAnimation();
+	executeOnScriptRegion(collisionRegion, loadSingleCollisionAnimation, collisionAnimation);
+	collisionAnimation->mAnimation = animation;
+	position = getPositionAfterScriptRegion(position.mRegion, collisionRegion);	
+	return position;
+}
+
 static ScriptPosition loader(void* caller, ScriptPosition position) {
 	char word[100];	
 	position = getNextScriptString(position, word);
@@ -130,13 +146,11 @@ static ScriptPosition loader(void* caller, ScriptPosition position) {
 	} else if(!strcmp(word, "PUNCH_ANIMATION_1")) {
 	 	position = loadTextureDataAndAnimation(position, gData.weakPunchTextures, &gData.weakPunchAnimation);
 	} else if(!strcmp(word, "PUNCH_COLLISION_ANIMATION_1")) {
-	 	ScriptRegion collisionRegion = getScriptRegionAtPosition(position);
-		gData.weakPunchCollisionAnimation = makeEmptyCollisionAnimation();
-		executeOnScriptRegion(collisionRegion, loadSingleCollisionAnimation, &gData.weakPunchCollisionAnimation);
-		gData.weakPunchCollisionAnimation.mAnimation = gData.weakPunchAnimation;
-		position = getPositionAfterScriptRegion(position.mRegion, collisionRegion);
-	}else if(!strcmp(word, "PUNCH_ANIMATION_2")) {
+		position = loadPunchCollisionAnimation(position, &gData.weakPunchCollisionAnimation, gData.weakPunchAnimation);
+	} else if(!strcmp(word, "PUNCH_ANIMATION_2")) {
 	 	position = loadTextureDataAndAnimation(position, gData.strongPunchTextures, &gData.strongPunchAnimation);
+	} else if(!strcmp(word, "PUNCH_COLLISION_ANIMATION_2")) {
+		position = loadPunchCollisionAnimation(position, &gData.strongPunchCollisionAnimation, gData.strongPunchAnimation);
 	} else if(!strcmp(word, "HIT_ANIMATION")) {
 	 	position = loadTextureDataAndAnimation(position, gData.hitTextures, &gData.hitAnimation);
 	} else if(!strcmp(word, "COLLISION_DATA")) {
@@ -164,10 +178,13 @@ void loadPlayer() {
 	gData.state = STATE_IDLE;
 	gData.direction = 1;
 	gData.collisionData = makeHittableCollisionData();
-	gData.collisionID = addColliderToCollisionHandler(getPlayerAttackCollisionListID(), gData.mPosition, gData.collider, playerHitCB, NULL, &gData.collisionData);
+	gData.collisionID = addColliderToCollisionHandler(getPlayerCollisionListID(), gData.mPosition, gData.collider, playerHitCB, NULL, &gData.collisionData);
 	gData.collisionAnimationID = -1;
+	gData.comboState = 0;
 
 	gData.weakPunchCollisionData = makePunchCollisionData(50, makePosition(0,0,0));	
+	gData.strongPunchCollisionData = makePunchCollisionData(100, makePosition(0,0,0));	
+	
 
 	gData.animationID = playAnimationLoop(makePosition(0,0,0), gData.idleTextures, gData.idleAnimation, makeRectangleFromTexture(gData.idleTextures[0]));
 	setAnimationBasePositionReference(gData.animationID, gData.mPosition);
@@ -240,40 +257,58 @@ static void checkMovement() {
 
 }
 
+
+static void resetComboState(void* caller) {
+	(void) caller;
+	gData.comboState = 0;
+}
+
 static void punchHitSomething(void* tCaller, void* tCollisionData) {
 	(void) tCaller;
 	(void) tCollisionData;
+
+	if(gData.state == STATE_WEAK_PUNCH && !gData.comboState) {
+		gData.comboState = 1;
+		addTimerCB(30, resetComboState, NULL);
+
+	}
 }
 
-static void weakPunchFinished(void* caller) {
+static void punchFinished(void* caller) {
 	removeAnimationCB(gData.animationID);
 	gData.collisionAnimationID = -1;
+
 	setIdle();
 }
 
-static void setWeakPunch() {
-	gData.state = STATE_WEAK_PUNCH;
-	changeAnimation(gData.animationID, gData.weakPunchTextures, gData.weakPunchAnimation, makeRectangleFromTexture(gData.weakPunchTextures[0]));
-	setAnimationCB(gData.animationID, weakPunchFinished);
-	gData.collisionAnimationID = addHandledCollisionAnimation(getPlayerAttackCollisionListID(), gData.mPosition, gData.weakPunchCollisionAnimation, punchHitSomething, NULL, &gData.weakPunchCollisionData);
+static void setPunch(State state, TextureData* textures, Animation animation, CollisionAnimation collisionAnimation, CollisionData* collisionData) {
+	gData.state = state;
+	changeAnimation(gData.animationID, textures, animation, makeRectangleFromTexture(textures[0]));
+	setAnimationCB(gData.animationID, punchFinished, NULL);
+	updateCollisionDataID(collisionData);
+	gData.collisionAnimationID = addHandledCollisionAnimation(getPlayerAttackCollisionListID(), gData.mPosition, collisionAnimation, punchHitSomething, NULL, collisionData);
 	setCollisionAnimationCenter(gData.collisionAnimationID, gData.mCenter);
 	if(gData.direction == -1) {
 		invertCollisionAnimationVertical(gData.collisionAnimationID);
 	}
 }
 
-static void checkWeakPunch()  {
+static void setStrongPunch() {
+	setPunch(STATE_STRONG_PUNCH, gData.strongPunchTextures, gData.strongPunchAnimation, gData.strongPunchCollisionAnimation, &gData.strongPunchCollisionData);
+}
+
+static void setWeakPunch() {
+		setPunch(STATE_WEAK_PUNCH, gData.weakPunchTextures, gData.weakPunchAnimation, gData.weakPunchCollisionAnimation, &gData.weakPunchCollisionData);
+
+}
+
+static void checkPunch()  {
 	if(gData.state != STATE_IDLE && gData.state != STATE_WALKING) return;
 
 	if(hasPressedXFlank()) {
-		setWeakPunch();
+		if(gData.comboState) setStrongPunch();
+		else setWeakPunch();
 	}
-}
-
-static void checkPunch() {
-	checkWeakPunch();	
-
-
 }
 
 void updatePlayer() {

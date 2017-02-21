@@ -15,6 +15,15 @@
 
 #include "collision.h"
 
+typedef enum {
+
+	STATE_IDLE,
+	STATE_WALKING,
+	STATE_HIT,
+	STATE_DEATH
+
+} EnemyState;
+
 typedef struct {
 	Animation idleAnimation;
 	TextureData idleTextures[10];
@@ -25,6 +34,9 @@ typedef struct {
 	Animation deathAnimation;
 	TextureData deathTextures[10];
 
+	Animation hitAnimation;
+	TextureData hitTextures[10];
+
 	int health;
 	Collider col;
 
@@ -33,15 +45,25 @@ typedef struct {
 	
 	Position center;
 
+
 } EnemyType;
 
 typedef struct {
+
+	int id;
 
 	int physicsID;
 	int collisionID;
 	int animationID;
 	int health;
+	int type;
+	int getHitFromID;
 	CollisionData collisionData;
+
+	Position target;
+	Position* position;
+
+	EnemyState state;
 
 } ActiveEnemy;
 
@@ -82,6 +104,8 @@ static ScriptPosition loadSingleEnemyType(void* caller, ScriptPosition pos) {
 		pos = loadSingleEnemyTypeAnimation(pos, &enemyType->deathAnimation, enemyType->deathTextures);
 	} else if(!strcmp(word, "WALKING_ANIMATION")) {
 		pos = loadSingleEnemyTypeAnimation(pos, &enemyType->walkingAnimation, enemyType->walkingTextures);
+	} else if(!strcmp(word, "HIT_ANIMATION")) {
+		pos = loadSingleEnemyTypeAnimation(pos, &enemyType->hitAnimation, enemyType->hitTextures);
 	} else if(!strcmp(word, "HEALTH")) {
 		pos = getNextScriptInteger(pos, &enemyType->health);
 	} else if(!strcmp(word, "COLLISION")) {
@@ -148,8 +172,28 @@ void loadEnemies() {
 	loadEnemyTypes();
 }
 
+static void checkRandomWalk(ActiveEnemy* enemy) {
+	if(enemy->state == STATE_IDLE) {
+		checkStartRandomWalk(enemy);
+	} else if(enemy->state == STATE_WALKING) {
+		checkWalking(enemy);
+	}
+
+}
+
+static void checkPunch() {
+	if(canHitPlayer()) hit();
+}
+
+static void updateSingleEnemy(void* caller, void* data) {
+	(void) caller;
+	ActiveEnemy* enemy = data;
+	checkRandomWalk(enemy);
+	checkPunch(enemy);
+}
+
 void updateEnemies() {
-	// via callbacks?
+	list_map(&gData.activeEnemies, updateSingleEnemy, NULL);
 }
 
 
@@ -158,9 +202,69 @@ int getActiveEnemyAmount() {
 	return list_size(&gData.activeEnemies);
 }
 
+
+static void removeActiveEnemy(ActiveEnemy* enemy) {
+	
+	removeHandledAnimation(enemy->animationID);
+	removeFromCollisionHandler(getEnemyCollisionListID(), enemy->collisionID);
+	removeFromPhysicsHandler(enemy->physicsID);
+	list_remove(&gData.activeEnemies, enemy->id);
+}
+
+static void dyingOver(void* tCaller) {
+	ActiveEnemy* enemy = tCaller;
+	removeActiveEnemy(enemy);
+}
+
+static void die(ActiveEnemy* enemy) {
+	if(enemy->state == STATE_DEATH) return;
+	
+	EnemyType* enemyType = vector_get(&gData.enemyTypes, enemy->type);
+
+	changeAnimation(enemy->animationID, enemyType->deathTextures, enemyType->deathAnimation, makeRectangleFromTexture(enemyType->deathTextures[0]));
+	setAnimationCB(enemy->animationID, dyingOver, enemy);
+	enemy->state = STATE_DEATH;
+}
+
+static void setIdle(ActiveEnemy* enemy) {
+	EnemyType* enemyType = vector_get(&gData.enemyTypes, enemy->type);
+
+	changeAnimation(enemy->animationID, enemyType->idleTextures, enemyType->idleAnimation, makeRectangleFromTexture(enemyType->idleTextures[0]));
+	removeAnimationCB(enemy->animationID);
+	enemy->state = STATE_IDLE;
+}
+
+static void gettingHitOver(void* tCaller) {
+	ActiveEnemy* enemy = tCaller;
+	setIdle(enemy);
+}
+
+static void getHit(ActiveEnemy* enemy) {
+	EnemyType* enemyType = vector_get(&gData.enemyTypes, enemy->type);
+
+	changeAnimation(enemy->animationID, enemyType->hitTextures, enemyType->hitAnimation, makeRectangleFromTexture(enemyType->hitTextures[0]));
+	setAnimationCB(enemy->animationID, gettingHitOver, enemy);
+	enemy->state = STATE_HIT;
+}
+
 static void enemyHitCB(void* tCaller, void* tCollisionData) {
-	(void) tCaller;
-	(void) tCollisionData;
+	ActiveEnemy* enemy = tCaller;
+	CollisionData* cData = tCollisionData;
+
+	if(enemy->getHitFromID == cData->id) return;
+
+	enemy->getHitFromID = cData->id;
+	enemy->health -= cData->strength;
+
+	if(enemy->health <= 0) {
+		die(enemy);
+		return;
+	}
+
+	addAccelerationToHandledPhysics(enemy->physicsID, cData->force);
+
+	getHit(enemy);
+
 }
 
 
@@ -171,20 +275,26 @@ void spawnEnemy(int type, Position pos) {
 
 	enemy->health = enemyType->health;
 	enemy->physicsID = addToPhysicsHandler(pos);
+	enemy->type = type;
+	enemy->getHitFromID = -1;
+	
 	setHandledPhysicsMaxVelocity(enemy->physicsID, enemyType->maxVelocity);
 	setHandledPhysicsDragCoefficient(enemy->physicsID, enemyType->dragCoefficient);
 
 	PhysicsObject* physics = getPhysicsFromHandler(enemy->physicsID);
+	enemy->position = &physics->mPosition;
+	enemy->target = *enemy->position;
 
 	enemy->collisionData = makeHittableCollisionData();
 	enemy->collisionID = addColliderToCollisionHandler(getEnemyCollisionListID(), &physics->mPosition, enemyType->col, enemyHitCB, enemy, &enemy->collisionData);
 
+	enemy->state = STATE_IDLE;
 	enemy->animationID = playAnimationLoop(makePosition(0,0,0), enemyType->idleTextures, enemyType->idleAnimation, makeRectangleFromTexture(enemyType->idleTextures[0]));
 	setAnimationBasePositionReference(enemy->animationID, &physics->mPosition);
 	setAnimationScreenPositionReference(enemy->animationID, gData.screenPositionReference);
 	setAnimationCenter(enemy->animationID, enemyType->center);
 
-	list_push_front_owned(&gData.activeEnemies, enemy);
+	enemy->id = list_push_front_owned(&gData.activeEnemies, enemy);
 }
 
 void setEnemiesScreenPositionReference(Position* p) {

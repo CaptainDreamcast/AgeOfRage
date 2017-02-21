@@ -10,13 +10,28 @@ LOAD {
 
 		0 0 0 0 0 0
 		0 0 0 0 0 0
-		80 64 -0.4 105 84 0.4
+		80 64 -0.4 97 84 0.4
 		0 0 0 0 0 0
 		0 0 0 0 0 0
 
 	}
 
-	PUNCH_ANIMATION_2 9 10 PUNCH2_
+	PUNCH_ANIMATION_2 9 4 PUNCH2_
+
+	PUNCH_COLLISION_ANIMATION_2 {
+
+		0 0 0 0 0 0
+		0 0 0 0 0 0
+		0 0 0 0 0 0
+		0 0 0 0 0 0
+		67 63 -1 107 79 1
+		0 0 0 0 0 0
+		0 0 0 0 0 0
+		0 0 0 0 0 0
+		0 0 0 0 0 0
+
+	}
+
 	HIT_ANIMATION 3 10 HIT
 
 	CENTER_X 60
