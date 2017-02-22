@@ -1,5 +1,7 @@
 #include "enemies.h"
 
+#include <math.h>
+
 #include <tari/datastructures.h>
 #include <tari/animation.h>
 #include <tari/texture.h>
@@ -9,18 +11,23 @@
 #include <tari/physicshandler.h>
 #include <tari/collisionhandler.h>
 #include <tari/system.h>
+#include <tari/math.h>
+#include <tari/collisionanimation.h>
+#include <tari/timer.h>
 
 #include <tari/log.h>
 
 
 #include "collision.h"
+#include "player.h"
 
 typedef enum {
 
 	STATE_IDLE,
 	STATE_WALKING,
 	STATE_HIT,
-	STATE_DEATH
+	STATE_DEATH,
+	STATE_PUNCH
 
 } EnemyState;
 
@@ -37,6 +44,12 @@ typedef struct {
 	Animation hitAnimation;
 	TextureData hitTextures[10];
 
+	Animation punchAnimation;
+	TextureData punchTextures[10];
+
+	CollisionData punchCollisionData;
+	CollisionAnimation punchCollisionAnimation;
+
 	int health;
 	Collider col;
 
@@ -44,6 +57,7 @@ typedef struct {
 	Vector3D dragCoefficient;
 	
 	Position center;
+	double speed;
 
 
 } EnemyType;
@@ -59,9 +73,15 @@ typedef struct {
 	int type;
 	int getHitFromID;
 	CollisionData collisionData;
+	CollisionData punchCollisionData;
+
+	int direction;
+	int collisionAnimationID;
+	int isAllowedToPunch;
 
 	Position target;
 	Position* position;
+	Velocity* velocity;
 
 	EnemyState state;
 
@@ -106,6 +126,18 @@ static ScriptPosition loadSingleEnemyType(void* caller, ScriptPosition pos) {
 		pos = loadSingleEnemyTypeAnimation(pos, &enemyType->walkingAnimation, enemyType->walkingTextures);
 	} else if(!strcmp(word, "HIT_ANIMATION")) {
 		pos = loadSingleEnemyTypeAnimation(pos, &enemyType->hitAnimation, enemyType->hitTextures);
+	}  else if(!strcmp(word, "PUNCH_ANIMATION")) {
+		pos = loadSingleEnemyTypeAnimation(pos, &enemyType->punchAnimation, enemyType->punchTextures);
+	} else if(!strcmp(word, "PUNCH_COLLISION_DATA")) {
+		int strength;
+		Acceleration force;
+		pos = getNextScriptInteger(pos, &strength);
+		pos = getNextScriptDouble(pos, &force.x);
+		pos = getNextScriptDouble(pos, &force.y);
+		force.z = 0;
+		enemyType->punchCollisionData = makePunchCollisionData(strength, force);
+	} else if(!strcmp(word, "PUNCH_COLLISION_ANIMATION")) {
+		pos = loadPunchCollisionAnimation(pos, &enemyType->punchCollisionAnimation, enemyType->punchAnimation);
 	} else if(!strcmp(word, "HEALTH")) {
 		pos = getNextScriptInteger(pos, &enemyType->health);
 	} else if(!strcmp(word, "COLLISION")) {
@@ -127,7 +159,9 @@ static ScriptPosition loadSingleEnemyType(void* caller, ScriptPosition pos) {
 		pos = getNextScriptDouble(pos, &enemyType->center.x);
 		enemyType->center.y = 0;
 		enemyType->center.z = 0;
-	}else {
+	}  else if(!strcmp(word, "SPEED")) {
+		pos = getNextScriptDouble(pos, &enemyType->speed);
+	} else {
 		logError("Unrecognized token");
 		logErrorString(word);
 		abortSystem();
@@ -172,24 +206,137 @@ void loadEnemies() {
 	loadEnemyTypes();
 }
 
+static void invert(ActiveEnemy* enemy) {
+	enemy->direction *= -1;
+	inverseAnimationVertical(enemy->animationID);
+	if(enemy->collisionAnimationID != -1) {
+		invertCollisionAnimationVertical(enemy->collisionAnimationID);
+	}
+}
+
+static void setIdle(ActiveEnemy* enemy) {
+	EnemyType* enemyType = vector_get(&gData.enemyTypes, enemy->type);
+
+	changeAnimation(enemy->animationID, enemyType->idleTextures, enemyType->idleAnimation, makeRectangleFromTexture(enemyType->idleTextures[0]));
+	removeAnimationCB(enemy->animationID);
+	enemy->state = STATE_IDLE;
+}
+
+static void setWalking(ActiveEnemy* enemy) {
+	EnemyType* enemyType = vector_get(&gData.enemyTypes, enemy->type);
+
+	changeAnimation(enemy->animationID, enemyType->walkingTextures, enemyType->walkingAnimation, makeRectangleFromTexture(enemyType->walkingTextures[0]));
+	removeAnimationCB(enemy->animationID);
+	enemy->state = STATE_WALKING;
+}
+
+static void checkStartRandomWalk(ActiveEnemy* enemy) {
+	Position targetDelta = makePosition(randfrom(-50, 50), randfrom(-50, 50), 0);
+	Position pPosition = getPlayerPosition();
+	Position playerDelta = vecNormalize(vecAdd(pPosition, vecScale(*enemy->position, -1)));
+	Position totalDelta = vecAdd(targetDelta, vecScale(playerDelta, 10));
+
+	enemy->target = vecAdd(*enemy->position, totalDelta);
+	constraintIntoLevel(&enemy->target, gData.screenPositionReference);
+
+
+	setWalking(enemy);
+}
+
+static double positionDistance(Position p1, Position p2) {
+		p1.z = p2.z;
+		return vecLength(vecAdd(p1, vecScale(p2, -1)));
+}
+
+static void checkWalking(ActiveEnemy* enemy) {
+	EnemyType* enemyType = vector_get(&gData.enemyTypes, enemy->type);
+
+	if(positionDistance(*enemy->position, enemy->target) < 3) {
+		setIdle(enemy);
+	} else {
+		Position delta = vecNormalize(vecAdd(enemy->target, vecScale(*enemy->position, -1)));
+		delta.z = 0;
+		addAccelerationToHandledPhysics(enemy->physicsID, vecScale(delta, enemyType->speed));
+	}
+}
+
+static void checkInversion(ActiveEnemy* enemy) {
+	if(enemy->direction == 1 && enemy->velocity->x < 0) invert(enemy);
+	else if(enemy->direction == -1 && enemy->velocity->x > 0) invert(enemy);
+}
+
 static void checkRandomWalk(ActiveEnemy* enemy) {
 	if(enemy->state == STATE_IDLE) {
 		checkStartRandomWalk(enemy);
 	} else if(enemy->state == STATE_WALKING) {
 		checkWalking(enemy);
+		checkInversion(enemy);
 	}
 
 }
 
-static void checkPunch() {
-	if(canHitPlayer()) hit();
+static void setPunchingAllowed(void* caller) {
+	ActiveEnemy* enemy = caller;
+	enemy->isAllowedToPunch = 1;
+}
+
+static void punchFinished(void* caller){	
+	ActiveEnemy* enemy = caller;
+	if(enemy->state != STATE_PUNCH) return;
+	enemy->collisionAnimationID = -1;
+	setIdle(enemy);
+
+	enemy->isAllowedToPunch = 0;
+	addTimerCB(60, setPunchingAllowed, enemy);
+}
+
+static void punchHitSomething(void* caller, void* collisionData) {
+
+}
+
+static void setPunch(ActiveEnemy* enemy) {
+	EnemyType* enemyType = vector_get(&gData.enemyTypes, enemy->type);
+
+	enemy->state = STATE_PUNCH;
+	changeAnimation(enemy->animationID, enemyType->punchTextures, enemyType->punchAnimation, makeRectangleFromTexture(enemyType->punchTextures[0]));
+	setAnimationCB(enemy->animationID, punchFinished, enemy);
+	enemy->punchCollisionData = enemyType->punchCollisionData;
+	updateCollisionDataID(&enemy->punchCollisionData);
+	enemy->collisionAnimationID = addHandledCollisionAnimation(getEnemyAttackCollisionListID(), enemy->position, enemyType->punchCollisionAnimation, punchHitSomething, enemy, &enemy->punchCollisionData);
+	setCollisionAnimationCenter(enemy->collisionAnimationID, enemyType->center);
+	if(enemy->direction == -1) {
+		invertCollisionAnimationVertical(enemy->collisionAnimationID);
+	}
+}
+
+static int isInRangeToHitPlayer(ActiveEnemy* enemy) {
+	Position p = getPlayerPosition();
+	Position e = *enemy->position;
+
+	if(fabs(p.x - e.x) > 50) return 0;
+	if(fabs(p.y - e.y) > 20) return 0;
+	if(p.x > e.x && enemy->direction == -1) return 0;
+	if(p.x < e.x && enemy->direction == 1) return 0;
+
+	return 1;
+	
+}
+
+static void checkPunch(ActiveEnemy* enemy) {
+	if(!enemy->isAllowedToPunch) return;
+	if(enemy->state != STATE_IDLE && enemy->state != STATE_WALKING) return;	
+
+	if(isInRangeToHitPlayer(enemy)) {
+		setPunch(enemy);
+	}
 }
 
 static void updateSingleEnemy(void* caller, void* data) {
 	(void) caller;
 	ActiveEnemy* enemy = data;
 	checkRandomWalk(enemy);
-	checkPunch(enemy);
+	checkPunch(enemy); 
+	adjustZ(enemy->position);
 }
 
 void updateEnemies() {
@@ -226,14 +373,6 @@ static void die(ActiveEnemy* enemy) {
 	enemy->state = STATE_DEATH;
 }
 
-static void setIdle(ActiveEnemy* enemy) {
-	EnemyType* enemyType = vector_get(&gData.enemyTypes, enemy->type);
-
-	changeAnimation(enemy->animationID, enemyType->idleTextures, enemyType->idleAnimation, makeRectangleFromTexture(enemyType->idleTextures[0]));
-	removeAnimationCB(enemy->animationID);
-	enemy->state = STATE_IDLE;
-}
-
 static void gettingHitOver(void* tCaller) {
 	ActiveEnemy* enemy = tCaller;
 	setIdle(enemy);
@@ -253,18 +392,23 @@ static void enemyHitCB(void* tCaller, void* tCollisionData) {
 
 	if(enemy->getHitFromID == cData->id) return;
 
+	
+
 	enemy->getHitFromID = cData->id;
 	enemy->health -= cData->strength;
 
 	if(enemy->health <= 0) {
 		die(enemy);
-		return;
+	} else {
+
+		addAccelerationToHandledPhysics(enemy->physicsID, cData->force);
+		getHit(enemy);
 	}
 
-	addAccelerationToHandledPhysics(enemy->physicsID, cData->force);
-
-	getHit(enemy);
-
+	if(enemy->collisionAnimationID != -1) {
+		removeHandledCollisionAnimation(enemy->collisionAnimationID);
+		enemy->collisionAnimationID = -1;
+	}
 }
 
 
@@ -277,16 +421,22 @@ void spawnEnemy(int type, Position pos) {
 	enemy->physicsID = addToPhysicsHandler(pos);
 	enemy->type = type;
 	enemy->getHitFromID = -1;
+
+	enemy->direction = 1;
+	enemy->collisionAnimationID = -1;
+	enemy->isAllowedToPunch = 1;
 	
 	setHandledPhysicsMaxVelocity(enemy->physicsID, enemyType->maxVelocity);
 	setHandledPhysicsDragCoefficient(enemy->physicsID, enemyType->dragCoefficient);
 
 	PhysicsObject* physics = getPhysicsFromHandler(enemy->physicsID);
 	enemy->position = &physics->mPosition;
+	enemy->velocity = &physics->mVelocity;
 	enemy->target = *enemy->position;
 
 	enemy->collisionData = makeHittableCollisionData();
 	enemy->collisionID = addColliderToCollisionHandler(getEnemyCollisionListID(), &physics->mPosition, enemyType->col, enemyHitCB, enemy, &enemy->collisionData);
+	enemy->punchCollisionData = enemyType->punchCollisionData;
 
 	enemy->state = STATE_IDLE;
 	enemy->animationID = playAnimationLoop(makePosition(0,0,0), enemyType->idleTextures, enemyType->idleAnimation, makeRectangleFromTexture(enemyType->idleTextures[0]));

@@ -12,6 +12,7 @@
 #include <tari/datastructures.h>
 #include <tari/collisionanimation.h>
 #include <tari/timer.h>
+#include <tari/math.h>
 
 #include "collision.h"
 
@@ -20,6 +21,8 @@ typedef enum {
 	STATE_WALKING,
 	STATE_WEAK_PUNCH,
 	STATE_STRONG_PUNCH,
+	STATE_HIT,
+	STATE_DEATH
 } State;
 
 static struct {
@@ -42,6 +45,9 @@ static struct {
 	Animation strongPunchAnimation;
 	TextureData strongPunchTextures[10];
 
+	Animation deathAnimation;
+	TextureData deathTextures[10];
+
 	Animation hitAnimation;
 	TextureData hitTextures[10];
 
@@ -63,6 +69,8 @@ static struct {
 	CollisionData collisionData;
 
 	int collisionAnimationID;
+
+	int health;
 } gData;
 
 
@@ -91,34 +99,7 @@ static ScriptPosition loadTextureDataAndAnimation(ScriptPosition position, Textu
 }
 
 
-static ScriptPosition loadSingleCollisionAnimation(void* caller, ScriptPosition position) {
-	CollisionAnimation* cAnimation = caller;
 
-	Position topLeft;
-	Position bottomRight;
-	position = getNextScriptDouble(position, &topLeft.x);
-	position = getNextScriptDouble(position, &topLeft.y);
-	position = getNextScriptDouble(position, &topLeft.z);
-	position = getNextScriptDouble(position, &bottomRight.x);
-	position = getNextScriptDouble(position, &bottomRight.y);
-	position = getNextScriptDouble(position, &bottomRight.z);
-
-	CollisionRect rect = makeCollisionRect(topLeft, bottomRight);
-	Collider* col = allocMemory(sizeof(Collider));
-	*col = makeColliderFromRect(rect);
-	vector_push_back_owned(&cAnimation->mFrames, col);
-
-	return position;
-}
-
-static ScriptPosition loadPunchCollisionAnimation(ScriptPosition position, CollisionAnimation* collisionAnimation, Animation animation) {
-	ScriptRegion collisionRegion = getScriptRegionAtPosition(position);
-	*collisionAnimation = makeEmptyCollisionAnimation();
-	executeOnScriptRegion(collisionRegion, loadSingleCollisionAnimation, collisionAnimation);
-	collisionAnimation->mAnimation = animation;
-	position = getPositionAfterScriptRegion(position.mRegion, collisionRegion);	
-	return position;
-}
 
 static ScriptPosition loader(void* caller, ScriptPosition position) {
 	char word[100];	
@@ -143,6 +124,8 @@ static ScriptPosition loader(void* caller, ScriptPosition position) {
 		position = loadTextureDataAndAnimation(position, gData.idleTextures, &gData.idleAnimation);
 	} else if(!strcmp(word, "WALKING_ANIMATION")) {
 		position = loadTextureDataAndAnimation(position, gData.walkingTextures, &gData.walkingAnimation);
+	} else if(!strcmp(word, "DEATH_ANIMATION")) {
+		position = loadTextureDataAndAnimation(position, gData.deathTextures, &gData.deathAnimation);
 	} else if(!strcmp(word, "PUNCH_ANIMATION_1")) {
 	 	position = loadTextureDataAndAnimation(position, gData.weakPunchTextures, &gData.weakPunchAnimation);
 	} else if(!strcmp(word, "PUNCH_COLLISION_ANIMATION_1")) {
@@ -153,6 +136,8 @@ static ScriptPosition loader(void* caller, ScriptPosition position) {
 		position = loadPunchCollisionAnimation(position, &gData.strongPunchCollisionAnimation, gData.strongPunchAnimation);
 	} else if(!strcmp(word, "HIT_ANIMATION")) {
 	 	position = loadTextureDataAndAnimation(position, gData.hitTextures, &gData.hitAnimation);
+	} else if(!strcmp(word, "HEALTH")) {
+	 	position = getNextScriptInteger(position, &gData.health);
 	} else if(!strcmp(word, "COLLISION_DATA")) {
 		CollisionRect rect;
 	 	position = getNextScriptDouble(position, &rect.mTopLeft.x);
@@ -195,9 +180,63 @@ void loadPlayer() {
 }
 
 
+static void setWalking() {
+	if(gData.state == STATE_WALKING) return;
+	gData.state = STATE_WALKING;
+	changeAnimation(gData.animationID, gData.walkingTextures, gData.walkingAnimation, makeRectangleFromTexture(gData.walkingTextures[0]));
+}
+
+static void setIdle() {
+	if(gData.state == STATE_IDLE) return;
+	gData.state = STATE_IDLE;
+	*gData.mVelocity = makePosition(0,0,0);
+	changeAnimation(gData.animationID, gData.idleTextures, gData.idleAnimation, makeRectangleFromTexture(gData.idleTextures[0]));
+}
+
+static void gettingHitOver(void* tCaller) {
+	(void) tCaller;
+	setIdle();
+}
+
+static void getHit() {
+	changeAnimation(gData.animationID, gData.hitTextures, gData.hitAnimation, makeRectangleFromTexture(gData.hitTextures[0]));
+	setAnimationCB(gData.animationID, gettingHitOver, NULL);
+	gData.state = STATE_HIT;
+}
+
+static void dyingOver(void* caller) {
+	// TODO
+}
+
+static void die() {
+	if(gData.state == STATE_DEATH) return;
+	
+
+	changeAnimation(gData.animationID, gData.deathTextures, gData.deathAnimation, makeRectangleFromTexture(gData.deathTextures[0]));
+	setAnimationCB(gData.animationID, dyingOver, NULL);
+	gData.state = STATE_DEATH;
+}
+
 static void playerHitCB(void* tCaller, void* tCollisionData) {
 	(void) tCaller;
-	(void) tCollisionData;
+	CollisionData* cData = tCollisionData;
+
+	if(cData->id == -2) return;
+	cData->id = -2;
+	gData.health -= cData->strength;
+	gData.health = max(0, gData.health);
+
+	if(gData.health == 0) {
+		die(); 
+	} else if(gData.state != STATE_HIT){
+		addAccelerationToHandledPhysics(gData.physicsID, cData->force);
+		getHit();
+	}
+
+	if(gData.collisionAnimationID != -1) {
+		removeHandledCollisionAnimation(gData.collisionAnimationID);
+		gData.collisionAnimationID = -1;
+	}
 }
 
 static void invert() {
@@ -212,20 +251,6 @@ static void checkInverted() {
 	if(gData.direction == 1 && gData.mVelocity->x < 0) invert();
 	if(gData.direction == -1 && gData.mVelocity->x > 0) invert();
 }
-
-static void setWalking() {
-	if(gData.state == STATE_WALKING) return;
-	gData.state = STATE_WALKING;
-	changeAnimation(gData.animationID, gData.walkingTextures, gData.walkingAnimation, makeRectangleFromTexture(gData.walkingTextures[0]));
-}
-
-static void setIdle() {
-	if(gData.state == STATE_IDLE) return;
-	gData.state = STATE_IDLE;
-	*gData.mVelocity = makePosition(0,0,0);
-	changeAnimation(gData.animationID, gData.idleTextures, gData.idleAnimation, makeRectangleFromTexture(gData.idleTextures[0]));
-}
-
 
 
 static void checkMovement() {
@@ -315,6 +340,7 @@ void updatePlayer() {
 	checkInverted();
 	checkMovement();
 	checkPunch();
+	adjustZ(gData.mPosition);
 }
 
 

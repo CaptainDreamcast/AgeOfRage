@@ -29,7 +29,7 @@ static void loadGameScreen() {
 	sprintf(imgpath, "/assets/level/%s", gData.currentLevelName);
 	setFileSystem("/pc/assets/level/level1");
 
-	activateCollisionHandlerDebugMode();
+	//activateCollisionHandlerDebugMode();
 
 	loadCollision();
 	loadPlayer();
