@@ -20,6 +20,7 @@
 
 #include "collision.h"
 #include "player.h"
+#include "userinterface.h"
 
 typedef enum {
 
@@ -69,6 +70,7 @@ typedef struct {
 	int physicsID;
 	int collisionID;
 	int animationID;
+	int shadowID;
 	int health;
 	int type;
 	int getHitFromID;
@@ -355,6 +357,7 @@ static void removeActiveEnemy(ActiveEnemy* enemy) {
 	removeHandledAnimation(enemy->animationID);
 	removeFromCollisionHandler(getEnemyCollisionListID(), enemy->collisionID);
 	removeFromPhysicsHandler(enemy->physicsID);
+	removeShadow(enemy->shadowID);
 	list_remove(&gData.activeEnemies, enemy->id);
 }
 
@@ -437,6 +440,7 @@ void spawnEnemy(int type, Position pos) {
 	enemy->collisionData = makeHittableCollisionData();
 	enemy->collisionID = addColliderToCollisionHandler(getEnemyCollisionListID(), &physics->mPosition, enemyType->col, enemyHitCB, enemy, &enemy->collisionData);
 	enemy->punchCollisionData = enemyType->punchCollisionData;
+	enemy->shadowID = addShadow(enemy->position, enemyType->center);
 
 	enemy->state = STATE_IDLE;
 	enemy->animationID = playAnimationLoop(makePosition(0,0,0), enemyType->idleTextures, enemyType->idleAnimation, makeRectangleFromTexture(enemyType->idleTextures[0]));

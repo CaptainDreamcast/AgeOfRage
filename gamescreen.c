@@ -13,6 +13,7 @@
 #include "player.h"
 #include "enemies.h"
 #include "collision.h"
+#include "userinterface.h"
 
 static struct {
 	char currentLevelName[100];
@@ -34,9 +35,9 @@ static void loadGameScreen() {
 	loadCollision();
 	loadPlayer();
 	loadEnemies();
+	loadUserInterface();
 	loadStage();
-
-	
+		
 
 }
 

@@ -4,6 +4,7 @@
 #include <tari/geometry.h>
 
 void loadPlayer();
+void addPlayerShadow();
 void updatePlayer();
 
 Position getPlayerPosition();

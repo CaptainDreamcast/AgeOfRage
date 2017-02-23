@@ -12,6 +12,7 @@
 
 #include "enemies.h"
 #include "player.h"
+#include "userinterface.h"
 
 static struct {
 	Script script;
@@ -103,6 +104,8 @@ void loadStage() {
 	Position* p = getScrollingBackgroundPositionReference(gData.groundID);
 	setPlayerScreenPositionReference(p);
 	setEnemiesScreenPositionReference(p);
+	setUserInterfaceScreenPositionReference(p);
+	addPlayerShadow();
 	setCollisionHandlerDebuggingScreenPositionReference(p);
 }
 

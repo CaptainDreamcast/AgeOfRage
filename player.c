@@ -15,6 +15,7 @@
 #include <tari/math.h>
 
 #include "collision.h"
+#include "userinterface.h"
 
 typedef enum {
 	STATE_IDLE, 
@@ -59,6 +60,7 @@ static struct {
 
 	int animationID;
 	int collisionID;
+	int shadowID;
 
 	State state;
 	int direction;
@@ -179,6 +181,9 @@ void loadPlayer() {
 	setHandledPhysicsDragCoefficient(gData.physicsID, makePosition(0.2, 0.2, 0));
 }
 
+void addPlayerShadow() {
+	gData.shadowID = addShadow(gData.mPosition, gData.mCenter);
+}
 
 static void setWalking() {
 	if(gData.state == STATE_WALKING) return;
@@ -225,6 +230,8 @@ static void playerHitCB(void* tCaller, void* tCollisionData) {
 	cData->id = -2;
 	gData.health -= cData->strength;
 	gData.health = max(0, gData.health);
+	setHealthBarPercentage(gData.health / 1000.0);
+
 
 	if(gData.health == 0) {
 		die(); 
