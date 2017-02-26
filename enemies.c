@@ -12,6 +12,7 @@
 #include <tari/collisionhandler.h>
 #include <tari/system.h>
 #include <tari/math.h>
+#include <tari/file.h>
 #include <tari/collisionanimation.h>
 #include <tari/timer.h>
 
@@ -40,7 +41,7 @@ typedef struct {
 	TextureData walkingTextures[10];
 
 	Animation deathAnimation;
-	TextureData deathTextures[10];
+	TextureData deathTextures[20];
 
 	Animation hitAnimation;
 	TextureData hitTextures[10];
@@ -50,7 +51,7 @@ typedef struct {
 
 	CollisionData punchCollisionData;
 	CollisionAnimation punchCollisionAnimation;
-
+	
 	int health;
 	Collider col;
 
@@ -83,9 +84,12 @@ typedef struct {
 
 	Position target;
 	Position* position;
+	
 	Velocity* velocity;
 
 	EnemyState state;
+
+	Position static128Position;
 
 } ActiveEnemy;
 
@@ -108,7 +112,7 @@ static ScriptPosition loadSingleEnemyTypeAnimation(ScriptPosition pos, Animation
 		char file[100];
 		char path[100];
 		pos = getNextScriptString(pos, file);
-		sprintf(path, "/sprites/%s", file);
+		sprintf(path, "sprites/%s", file);
 		textureData[i] = loadTexture(path);
 	}
 
@@ -195,8 +199,10 @@ static ScriptPosition loader(void* caller, ScriptPosition pos) {
 }
 
 static void loadEnemyTypes() {
-	Script s = loadScript("/scripts/enemies.txt");
+	Script s = loadScript("scripts/enemies.txt");
 	ScriptRegion r = getScriptRegion(s, "LOAD");
+
+	setWorkingDirectory("/assets/enemies/"); // TODO: fix this whole cwd mess
 	executeOnScriptRegion(r, loader, NULL);
 }
 
@@ -235,10 +241,10 @@ static void setWalking(ActiveEnemy* enemy) {
 static void checkStartRandomWalk(ActiveEnemy* enemy) {
 	Position targetDelta = makePosition(randfrom(-50, 50), randfrom(-50, 50), 0);
 	Position pPosition = getPlayerPosition();
-	Position playerDelta = vecNormalize(vecAdd(pPosition, vecScale(*enemy->position, -1)));
+	Position playerDelta = vecNormalize(vecAdd(pPosition, vecScale(enemy->static128Position, -1)));
 	Position totalDelta = vecAdd(targetDelta, vecScale(playerDelta, 10));
 
-	enemy->target = vecAdd(*enemy->position, totalDelta);
+	enemy->target = vecAdd(enemy->static128Position, totalDelta);
 	constraintIntoLevel(&enemy->target, gData.screenPositionReference);
 
 
@@ -253,10 +259,10 @@ static double positionDistance(Position p1, Position p2) {
 static void checkWalking(ActiveEnemy* enemy) {
 	EnemyType* enemyType = vector_get(&gData.enemyTypes, enemy->type);
 
-	if(positionDistance(*enemy->position, enemy->target) < 3) {
+	if(positionDistance(enemy->static128Position, enemy->target) < 3) {
 		setIdle(enemy);
 	} else {
-		Position delta = vecNormalize(vecAdd(enemy->target, vecScale(*enemy->position, -1)));
+		Position delta = vecNormalize(vecAdd(enemy->target, vecScale(enemy->static128Position, -1)));
 		delta.z = 0;
 		addAccelerationToHandledPhysics(enemy->physicsID, vecScale(delta, enemyType->speed));
 	}
@@ -313,7 +319,7 @@ static void setPunch(ActiveEnemy* enemy) {
 
 static int isInRangeToHitPlayer(ActiveEnemy* enemy) {
 	Position p = getPlayerPosition();
-	Position e = *enemy->position;
+	Position e = enemy->static128Position;
 
 	if(fabs(p.x - e.x) > 50) return 0;
 	if(fabs(p.y - e.y) > 20) return 0;
@@ -333,12 +339,22 @@ static void checkPunch(ActiveEnemy* enemy) {
 	}
 }
 
+static void updatePositionConstraints(ActiveEnemy* enemy) {
+	EnemyType* enemyType = vector_get(&gData.enemyTypes, enemy->type);
+
+	enemy->static128Position = *enemy->position;
+	enemy->static128Position.y += enemyType->idleTextures[0].mTextureSize.y - 128;
+	adjustZ(&enemy->static128Position);
+	enemy->position->z = enemy->static128Position.z;
+	
+}
+
 static void updateSingleEnemy(void* caller, void* data) {
 	(void) caller;
 	ActiveEnemy* enemy = data;
 	checkRandomWalk(enemy);
 	checkPunch(enemy); 
-	adjustZ(enemy->position);
+	updatePositionConstraints(enemy);
 }
 
 void updateEnemies() {
@@ -436,15 +452,16 @@ void spawnEnemy(int type, Position pos) {
 	enemy->position = &physics->mPosition;
 	enemy->velocity = &physics->mVelocity;
 	enemy->target = *enemy->position;
+	enemy->static128Position = *enemy->position;
 
 	enemy->collisionData = makeHittableCollisionData();
-	enemy->collisionID = addColliderToCollisionHandler(getEnemyCollisionListID(), &physics->mPosition, enemyType->col, enemyHitCB, enemy, &enemy->collisionData);
+	enemy->collisionID = addColliderToCollisionHandler(getEnemyCollisionListID(), enemy->position, enemyType->col, enemyHitCB, enemy, &enemy->collisionData);
 	enemy->punchCollisionData = enemyType->punchCollisionData;
-	enemy->shadowID = addShadow(enemy->position, enemyType->center);
+	enemy->shadowID = addShadow(&enemy->static128Position, enemyType->center);
 
 	enemy->state = STATE_IDLE;
 	enemy->animationID = playAnimationLoop(makePosition(0,0,0), enemyType->idleTextures, enemyType->idleAnimation, makeRectangleFromTexture(enemyType->idleTextures[0]));
-	setAnimationBasePositionReference(enemy->animationID, &physics->mPosition);
+	setAnimationBasePositionReference(enemy->animationID, enemy->position);
 	setAnimationScreenPositionReference(enemy->animationID, gData.screenPositionReference);
 	setAnimationCenter(enemy->animationID, enemyType->center);
 

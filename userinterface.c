@@ -2,6 +2,8 @@
 
 #include <tari/animation.h>
 
+#include "gamestate.h"
+
 static int UI_Z_BACK = 10;
 static int UI_Z_FRONT = 11;
 
@@ -20,14 +22,14 @@ static void showHealth() {
 
 	p = makePosition(14+37, 23+3, UI_Z_FRONT);
 	gData.healthID = playAnimationLoop(p, &gData.health, createOneFrameAnimation(), makeRectangleFromTexture(gData.health));
-	setHealthBarPercentage(1.0);
+	setHealthBarPercentage(getRemainingHealth() / 1000.0);
 }
 
 void loadUserInterface() {
 	gData.screenPositionReference = NULL;
-	gData.shadowTexture = loadTexture("/sprites/SHADOW.pkg");
-	gData.healthBackground = loadTexture("/sprites/UI_BACK.pkg");
-	gData.health = loadTexture("/sprites/LIFEBAR.pkg");
+	gData.shadowTexture = loadTexture("sprites/SHADOW.pkg");
+	gData.healthBackground = loadTexture("sprites/UI_BACK.pkg");
+	gData.health = loadTexture("sprites/LIFEBAR.pkg");
 
 	showHealth();
 }

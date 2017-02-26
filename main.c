@@ -10,6 +10,8 @@
 #include <tari/system.h>
 
 #include "gamescreen.h"
+#include "titlescreen.h"
+#include "gamestate.h"
 #include "system.h"
 
 KOS_INIT_FLAGS(INIT_DEFAULT);
@@ -54,8 +56,9 @@ int main() {
   initTariWrapperWithDefaultFlags();
   setMainFileSystem();
 
-  setCurrentLevelName("LEVEL1");
-  startScreenHandling(&GameScreen);
+  resetGameState();
+  setCurrentLevelName("level1");
+  startScreenHandling(&TitleScreen);
 
   exitGame();
 

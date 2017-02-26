@@ -16,6 +16,7 @@
 
 #include "collision.h"
 #include "userinterface.h"
+#include "gamestate.h"
 
 typedef enum {
 	STATE_IDLE, 
@@ -93,7 +94,7 @@ static ScriptPosition loadTextureDataAndAnimation(ScriptPosition position, Textu
 
 	int i;
 	for(i = 0; i < animation->mFrameAmount; i++) {
-		sprintf(path, "/sprites/%s%d.pkg", name, i);
+		sprintf(path, "sprites/%s%d.pkg", name, i);
 		textureData[i] = loadTexture(path);
 	}
 
@@ -138,8 +139,6 @@ static ScriptPosition loader(void* caller, ScriptPosition position) {
 		position = loadPunchCollisionAnimation(position, &gData.strongPunchCollisionAnimation, gData.strongPunchAnimation);
 	} else if(!strcmp(word, "HIT_ANIMATION")) {
 	 	position = loadTextureDataAndAnimation(position, gData.hitTextures, &gData.hitAnimation);
-	} else if(!strcmp(word, "HEALTH")) {
-	 	position = getNextScriptInteger(position, &gData.health);
 	} else if(!strcmp(word, "COLLISION_DATA")) {
 		CollisionRect rect;
 	 	position = getNextScriptDouble(position, &rect.mTopLeft.x);
@@ -159,7 +158,7 @@ static ScriptPosition loader(void* caller, ScriptPosition position) {
 }
 
 void loadPlayer() {
-	Script script = loadScript("/scripts/player.txt");
+	Script script = loadScript("scripts/player.txt");
 	ScriptRegion r = getScriptRegion(script, "LOAD");
 	executeOnScriptRegion(r, loader, NULL);
 	gData.state = STATE_IDLE;
@@ -172,6 +171,7 @@ void loadPlayer() {
 	gData.weakPunchCollisionData = makePunchCollisionData(50, makePosition(0,0,0));	
 	gData.strongPunchCollisionData = makePunchCollisionData(100, makePosition(0,0,0));	
 	
+	gData.health = getRemainingHealth();
 
 	gData.animationID = playAnimationLoop(makePosition(0,0,0), gData.idleTextures, gData.idleAnimation, makeRectangleFromTexture(gData.idleTextures[0]));
 	setAnimationBasePositionReference(gData.animationID, gData.mPosition);
@@ -228,6 +228,7 @@ static void playerHitCB(void* tCaller, void* tCollisionData) {
 
 	if(cData->id == -2) return;
 	cData->id = -2;
+
 	gData.health -= cData->strength;
 	gData.health = max(0, gData.health);
 	setHealthBarPercentage(gData.health / 1000.0);
@@ -358,4 +359,8 @@ Position getPlayerPosition() {
 
 void setPlayerScreenPositionReference(Position* p) {
 	setAnimationScreenPositionReference(gData.animationID, p);
+}
+
+int getPlayerHealth() {
+	return gData.health;
 }

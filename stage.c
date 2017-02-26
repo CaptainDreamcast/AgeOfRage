@@ -13,6 +13,8 @@
 #include "enemies.h"
 #include "player.h"
 #include "userinterface.h"
+#include "gamestate.h"
+#include "system.h"
 
 static struct {
 	Script script;
@@ -33,7 +35,7 @@ static struct {
 static ScriptPosition loadBackgroundElementWithoutAnimation(ScriptPosition position, char* path, Position* texturePosition) {	
 	char name[100];
 	position = getNextScriptString(position, name);
-	sprintf(path, "/sprites/%s.pkg", name);
+	sprintf(path, "sprites/%s.pkg", name);
 		
 	position = getNextScriptDouble(position, &texturePosition->x);
 	position = getNextScriptDouble(position, &texturePosition->y);
@@ -95,7 +97,7 @@ void loadStage() {
 	gData.isOver = 0;
 	gData.screenPosition = getScrollingBackgroundPositionReference(gData.groundID);
 
-	gData.script = loadScript("/scripts/stage.txt");
+	gData.script = loadScript("scripts/stage.txt");
 	ScriptRegion r = getScriptRegion(gData.script, "LOAD");
 	executeOnScriptRegion(r, loader, NULL);
 
@@ -124,6 +126,7 @@ static void updateScript() {
 
 		if(!hasNextScriptWord(gData.scriptPosition)) {
 			gData.isOver = 1;
+			setLevelCleared(getPlayerHealth());
 			return;
 		}
 
@@ -148,7 +151,13 @@ static void updateScript() {
 			gData.scriptPosition = getNextScriptInteger(gData.scriptPosition, &enemyType);
 			enemyPosition = vecAdd(enemyPosition, *gData.screenPosition);
 			spawnEnemy(enemyType, enemyPosition);	
+		} else if(!strcmp("LEVEL", word)) {
+			char name[100];
+			gData.scriptPosition = getNextScriptString(gData.scriptPosition, name);
+			setCurrentLevelName(name);
 		}
+
+		
 
 		gData.scriptPosition = getNextScriptInstruction(gData.scriptPosition);
 	}

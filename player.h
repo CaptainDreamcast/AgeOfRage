@@ -9,5 +9,6 @@ void updatePlayer();
 
 Position getPlayerPosition();
 void setPlayerScreenPositionReference(Position* p);
+int getPlayerHealth();
 
 #endif

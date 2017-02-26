@@ -1,6 +1,5 @@
 #include "gamescreen.h"
 
-#include <stdlib.h>
 #include <tari/file.h>
 #include <tari/datastructures.h>
 #include <tari/wrapper.h>
@@ -14,36 +13,33 @@
 #include "enemies.h"
 #include "collision.h"
 #include "userinterface.h"
-
-static struct {
-	char currentLevelName[100];
-} gData;
-
-void setCurrentLevelName(char* name) {
-	strcpy(gData.currentLevelName, name);
-}
+#include "gamestate.h"
+#include "titlescreen.h"
 
 static void loadGameScreen() {
 	
-	char imgpath[100];
+	char levelpath[100];
 
-	sprintf(imgpath, "/assets/level/%s", gData.currentLevelName);
-	setFileSystem("/pc/assets/level/level1");
-
+	sprintf(levelpath, "/assets/%s", getCurrentLevelName());
+	
 	//activateCollisionHandlerDebugMode();
 
+	resetLevelState();
 	loadCollision();
+	setWorkingDirectory("/assets/player");
 	loadPlayer();
+	setWorkingDirectory(levelpath);
 	loadEnemies();
+	setWorkingDirectory("/assets/ui");
 	loadUserInterface();
+	setWorkingDirectory(levelpath);
 	loadStage();
 		
 
 }
 
 static void unloadGameScreen() {
-	resetToGameBaseFileSystem();
-	unmountRomdisk("/LEVEL");	
+		
 }
 
 static void updateGameScreen() {
@@ -59,8 +55,12 @@ static void drawGameScreen() {
 static Screen* getGameScreenNextScreen() {
 	
 	if(hasPressedAbortFlank()) {
-		abortScreenHandling();
+		return &TitleScreen;
 	}
+
+	if(hasClearedLevel()) {
+		return &GameScreen;
+	}	
 
 	return NULL;
 }

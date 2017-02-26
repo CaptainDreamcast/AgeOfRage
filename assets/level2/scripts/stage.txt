@@ -1,0 +1,12 @@
+LOAD {
+	BACKGROUND1 BG01 0 0
+
+}
+
+MAIN {
+	0 ENEMY 100 100 3 0
+
+	
+	999 WAIT 
+}
+

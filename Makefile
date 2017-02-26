@@ -1,6 +1,7 @@
 TARGET = 1ST_READ
 OBJS = main.o \
-romdisk.o gamescreen.o system.o stage.o enemies.o player.o collision.o userinterface.o
+romdisk.o gamescreen.o system.o stage.o enemies.o player.o collision.o userinterface.o gamestate.o \
+continuescreen.o titlescreen.o
 OPTFLAGS=-O3 -fomit-frame-pointer -fno-delayed-branch -DDREAMCAST -Wall -Werror
 KOS_CFLAGS+= $(OPTFLAGS)
 KOS_ROMDISK_DIR = romdisk_boot
@@ -27,18 +28,13 @@ copy_debug:
 	mkdir filesystem/assets
 
 genlevels:
-	mkdir filesystem/assets/level
+	cp -r assets/* filesystem/assets
 	
-	mkdir filesystem/assets/level/level1
-	cp -r assets/level1/* filesystem/assets/level/level1
-	
-	find filesystem/assets/level -name '*.png' | xargs $(KOS_BASE)/utils/kmgenc/kmgenc -a4 
-	find filesystem/assets/level -name '*.kmg' | xargs tools/KOMPRESSOR/kompressor
-	find filesystem/assets/level -name '*.png' | xargs rm -f
-	find filesystem/assets/level -name '*.kmg' | xargs rm -f
-	find filesystem/assets/level -name '*.xcf' | xargs rm -f
-	#$(KOS_BASE)/utils/genromfs/genromfs -a 256 -d tmp_level  -f filesystem/assets/level/LEVEL1.img	
-	#rm -r -f tmp_level
+	find filesystem/assets/ -name '*.png' | xargs $(KOS_BASE)/utils/kmgenc/kmgenc -a4 
+	find filesystem/assets/ -name '*.kmg' | xargs tools/KOMPRESSOR/kompressor
+	find filesystem/assets/ -name '*.png' | xargs rm -f
+	find filesystem/assets/ -name '*.kmg' | xargs rm -f
+	find filesystem/assets/ -name '*.xcf' | xargs rm -f
 	
 
 clean:

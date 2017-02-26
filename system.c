@@ -4,6 +4,7 @@
 
 static struct {
 	char fs[100];
+	
 } gData;
 
 void setGameBaseFileSystem(char* fs) {
@@ -13,3 +14,4 @@ void setGameBaseFileSystem(char* fs) {
 void resetToGameBaseFileSystem() {
 	setFileSystem(gData.fs);
 }
+
