@@ -68,10 +68,10 @@ static void loadTitleScreen() {
 	loadAnimationAndTextures(8, 6, "MIRKLING_DEATH", gData.enemy[3][1], &gData.enemyAnimation[3][1]);
 	
 	
-	gData.playerID = playAnimationLoop(makePosition(100, 100, 4), gData.player[0], gData.playerAnimation[0], makeRectangleFromTexture(gData.player[0][0]));
+	gData.playerID = playAnimationLoop(makePosition(70, 100, 4), gData.player[0], gData.playerAnimation[0], makeRectangleFromTexture(gData.player[0][0]));
 	setAnimationCB(gData.playerID, playerAnimationFinished, NULL);
 	
-	gData.enemyID = playAnimationLoop(makePosition(135, 100, 3), gData.enemy[0][0], gData.enemyAnimation[0][0], makeRectangleFromTexture(gData.enemy[0][0][0]));
+	gData.enemyID = playAnimationLoop(makePosition(105, 100, 3), gData.enemy[0][0], gData.enemyAnimation[0][0], makeRectangleFromTexture(gData.enemy[0][0][0]));
 	setAnimationCB(gData.enemyID, enemyAnimationFinished, NULL);
 	setAnimationCenter(gData.enemyID, makePosition(60, 0, 0));
 	inverseAnimationVertical(gData.enemyID);
@@ -99,9 +99,9 @@ static void playerAnimationFinished(void* caller) {
 static void setEnemyPosition() {
 	Position p;
 	if(gData.whichEnemy == 1) {
-		p = makePosition(265, 155, 3);
+		p = makePosition(235, 155, 3);
 	} else {
-		p = makePosition(135, 100, 3);
+		p = makePosition(105, 100, 3);
 	}
 	setAnimationPosition(gData.enemyID, p);
 }

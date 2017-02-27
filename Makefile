@@ -1,12 +1,12 @@
 TARGET = 1ST_READ
 OBJS = main.o \
 romdisk.o gamescreen.o system.o stage.o enemies.o player.o collision.o userinterface.o gamestate.o \
-continuescreen.o titlescreen.o
+continuescreen.o titlescreen.o congratsscreen.o gameoverscreen.o
 OPTFLAGS=-O3 -fomit-frame-pointer -fno-delayed-branch -DDREAMCAST -Wall -Werror
 KOS_CFLAGS+= $(OPTFLAGS)
 KOS_ROMDISK_DIR = romdisk_boot
 
-#all: $(TARGET).elf #problematic when workling with libtari
+#all: $(TARGET).elf #problematic when working with libtari
 
 all: complete
 

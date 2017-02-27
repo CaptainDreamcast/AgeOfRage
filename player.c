@@ -210,7 +210,7 @@ static void getHit() {
 }
 
 static void dyingOver(void* caller) {
-	// TODO
+	setLost();
 }
 
 static void die() {

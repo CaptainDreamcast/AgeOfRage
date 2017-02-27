@@ -15,6 +15,7 @@
 #include "userinterface.h"
 #include "gamestate.h"
 #include "titlescreen.h"
+#include "continuescreen.h"
 
 static void loadGameScreen() {
 	
@@ -60,6 +61,10 @@ static Screen* getGameScreenNextScreen() {
 
 	if(hasClearedLevel()) {
 		return &GameScreen;
+	}
+
+	if(hasLost()) {
+		return &ContinueScreen;
 	}	
 
 	return NULL;

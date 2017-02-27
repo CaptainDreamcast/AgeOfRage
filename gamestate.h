@@ -5,6 +5,8 @@ void resetGameState();
 void resetLevelState();
 int hasClearedLevel();
 void setLevelCleared(int remainingHealth);
+int hasLost();
+void setLost();
 int getRemainingHealth();
 void resetHealth();
 

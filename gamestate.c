@@ -7,6 +7,7 @@ static struct {
 	int health;
 	
 	int isLevelCleared;
+	int hasLost;
 	char currentLevelName[100];
 
 } gData;
@@ -14,10 +15,12 @@ static struct {
 void resetGameState() {
 	resetHealth();
 	gData.isLevelCleared = 0;
+	gData.hasLost = 0;
 }
 
 void resetLevelState() {
 	gData.isLevelCleared = 0;
+	gData.hasLost = 0;
 }
 
 int hasClearedLevel() {
@@ -27,6 +30,14 @@ int hasClearedLevel() {
 void setLevelCleared(int remainingHealth) {
 	gData.isLevelCleared = 1;
 	gData.health = remainingHealth;
+}
+
+int hasLost() {
+	return gData.hasLost;
+}
+
+void setLost() {
+	gData.hasLost = 1;
 }
 
 void resetHealth() {

@@ -8,6 +8,7 @@
 #include "gamestate.h"
 #include "gamescreen.h"
 #include "titlescreen.h"
+#include "gameoverscreen.h"
 
 static struct {
 
@@ -40,7 +41,7 @@ static void loadContinueScreen() {
 	Animation anim = createEmptyAnimation();
 	anim.mFrameAmount = 11;
 	anim.mDuration = 60;
-	gData.numberID = playAnimation(makePosition(100, 100, 3), gData.numbers, anim, makeRectangleFromTexture(gData.numbers[0]), countdownFinished, NULL);
+	gData.numberID = playAnimation(makePosition(130, 130, 3), gData.numbers, anim, makeRectangleFromTexture(gData.numbers[0]), countdownFinished, NULL);
 }
 
 
@@ -66,17 +67,16 @@ static void drawContinueScreen() {
 
 static Screen* getContinueScreenNextScreen() {
 	
-	if(hasPressedStartFlank()) {
+	if(hasPressedAbortFlank()) {
+		return &TitleScreen;		
+	}
+	else if(hasPressedStartFlank()) {
 		resetHealth();
 		return &GameScreen;
 	}
 
-	if(hasPressedAbortFlank()) {
-		return &TitleScreen;		
-	}
-
 	if(gData.isCounterExpired) {
-		return &TitleScreen;
+		return &GameOverScreen;
 	}
 
 	return NULL;

@@ -11,6 +11,9 @@
 
 #include "gamescreen.h"
 #include "titlescreen.h"
+#include "continuescreen.h"
+#include "congratsscreen.h"
+#include "gameoverscreen.h"
 #include "gamestate.h"
 #include "system.h"
 
@@ -45,15 +48,17 @@ void setMainFileSystem() {
 
 int main() {
 
+  setScreenSize(320, 240);
+
+  initTariWrapperWithDefaultFlags();
+
   log("Check framerate");
   FramerateSelectReturnType framerateReturnType = selectFramerate();
   if (framerateReturnType == FRAMERATE_SCREEN_RETURN_ABORT) {
     exitGame();
   }
 
-  setScreenSize(320, 240);
-
-  initTariWrapperWithDefaultFlags();
+  
   setMainFileSystem();
 
   resetGameState();
