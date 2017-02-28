@@ -64,9 +64,9 @@ void updateCollisionDataID(CollisionData* cData) {
 
 void constraintIntoLevel(Position* p, Position* screenPositionReference) {
 	*p = vecAdd(*p, vecScale(*screenPositionReference, -1));
-	p->x = max(p->x, 0);
-	p->x = min(p->x, 320-128);
-	p->y = max(p->y, 50);
+	p->x = max(p->x, -55);
+	p->x = min(p->x, 320-64);
+	p->y = max(p->y, 20);
 	p->y = min(p->y, 240-128);
 	*p = vecAdd(*p, *screenPositionReference);
 }

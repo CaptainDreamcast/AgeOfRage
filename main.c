@@ -62,7 +62,7 @@ int main() {
   setMainFileSystem();
 
   resetGameState();
-  setCurrentLevelName("level1");
+  setCurrentLevelName("level2");
   startScreenHandling(&GameScreen);
 
   exitGame();
