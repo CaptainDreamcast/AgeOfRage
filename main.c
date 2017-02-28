@@ -16,6 +16,7 @@
 #include "gameoverscreen.h"
 #include "gamestate.h"
 #include "system.h"
+#include "logoscreen.h"
 
 KOS_INIT_FLAGS(INIT_DEFAULT);
 
@@ -61,7 +62,7 @@ int main() {
 
   resetGameState();
   setCurrentLevelName("level4");
-  startScreenHandling(&TitleScreen);
+  startScreenHandling(&LogoScreen);
 
   exitGame();
 
