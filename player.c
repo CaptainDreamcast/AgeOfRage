@@ -188,7 +188,7 @@ void loadPlayer() {
 }
 
 void addPlayerShadow() {
-	gData.shadowID = addShadow(gData.mPosition, gData.mCenter);
+	gData.shadowID = addShadow(gData.mPosition, gData.mCenter, 1.0);
 }
 
 static void setWalking() {

@@ -3,6 +3,8 @@ OBJS = main.o \
 romdisk.o gamescreen.o system.o stage.o enemies.o player.o collision.o userinterface.o gamestate.o \
 continuescreen.o titlescreen.o congratsscreen.o gameoverscreen.o
 OPTFLAGS=-O3 -fomit-frame-pointer -fno-delayed-branch -DDREAMCAST -Wall -Werror
+DEVELOP_CFLAGS= $(OPTFLAGS) -DDEVELOP
+DEPLOY_CFLAGS= $(OPTFLAGS)
 KOS_CFLAGS+= $(OPTFLAGS)
 KOS_ROMDISK_DIR = romdisk_boot
 
@@ -10,8 +12,9 @@ KOS_ROMDISK_DIR = romdisk_boot
 
 all: complete
 
-complete: clean build_images $(TARGET).elf
+complete: clean build_images develop_build
 
+deploy: clean build_images to_romdisk deploy_build
 
 
 build_images: copy_debug genlevels
@@ -26,6 +29,9 @@ copy_debug:
 	cp assets/debug/*.pkg romdisk_boot/debug
 	mkdir filesystem
 	mkdir filesystem/assets
+
+to_romdisk:
+	cp -r filesystem/* romdisk_boot
 
 genlevels:
 	cp -r assets/* filesystem/assets
@@ -45,8 +51,14 @@ clean:
 	-rm -r -f filesystem
 	-rm -f romdisk.img
 
-$(TARGET).elf: $(OBJS) 
-	$(KOS_CC) $(KOS_CFLAGS) -I${KOS_BASE}/../extensions/include $(KOS_LDFLAGS) \
+develop_build: $(OBJS) 
+	$(KOS_CC) $(KOS_CFLAGS) $(DEVELOP_CFLAGS) -I${KOS_BASE}/../extensions/include $(KOS_LDFLAGS) \
+	-o $(TARGET).elf $(KOS_START) \
+	$(OBJS) -lkmg $(OPTIONAL_LIBS) -lm -ltremor -ltari $(OBJEXTRA) $(KOS_LIBS)
+	$(KOS_OBJCOPY) -O binary $(TARGET).elf $(TARGET).BIN
+
+deploy_build: $(OBJS) 
+	$(KOS_CC) $(KOS_CFLAGS) $(DEPLOY_CFLAGS) -I${KOS_BASE}/../extensions/include $(KOS_LDFLAGS) \
 	-o $(TARGET).elf $(KOS_START) \
 	$(OBJS) -lkmg $(OPTIONAL_LIBS) -lm -ltremor -ltari $(OBJEXTRA) $(KOS_LIBS)
 	$(KOS_OBJCOPY) -O binary $(TARGET).elf $(TARGET).BIN

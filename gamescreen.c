@@ -16,6 +16,7 @@
 #include "gamestate.h"
 #include "titlescreen.h"
 #include "continuescreen.h"
+#include "congratsscreen.h"
 
 static void loadGameScreen() {
 	
@@ -40,13 +41,14 @@ static void loadGameScreen() {
 }
 
 static void unloadGameScreen() {
-		
+	resumeGame();	
 }
 
 static void updateGameScreen() {
 	updateStage();
 	updateEnemies();
 	updatePlayer();
+	updateUserInterface();
 }
 
 static void drawGameScreen() {
@@ -58,11 +60,15 @@ static Screen* getGameScreenNextScreen() {
 	if(hasPressedAbortFlank()) {
 		return &TitleScreen;
 	}
-
+	
+	if(hasClearedGame()) {
+		return &CongratsScreen;
+	}
+	
 	if(hasClearedLevel()) {
 		return &GameScreen;
 	}
-
+	
 	if(hasLost()) {
 		return &ContinueScreen;
 	}	

@@ -7,6 +7,8 @@ int hasClearedLevel();
 void setLevelCleared(int remainingHealth);
 int hasLost();
 void setLost();
+int hasClearedGame();
+void setGameCleared();
 int getRemainingHealth();
 void resetHealth();
 

@@ -24,8 +24,6 @@ KOS_INIT_ROMDISK(romdisk);
 
 uint32_t useRomDisk = 1;
 
-#define DEVELOP
-
 void exitGame() {
   shutdownTariWrapper();
 
@@ -40,7 +38,7 @@ void setMainFileSystem() {
 	#ifdef DEVELOP
 		setGameBaseFileSystem("/pc");
 	#else
-		setGameBaseFileSystem("/cd");
+		setGameBaseFileSystem("/rd");
 	#endif
 
 	resetToGameBaseFileSystem();
@@ -62,7 +60,7 @@ int main() {
   setMainFileSystem();
 
   resetGameState();
-  setCurrentLevelName("level2");
+  setCurrentLevelName("level4");
   startScreenHandling(&GameScreen);
 
   exitGame();

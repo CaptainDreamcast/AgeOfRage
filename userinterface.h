@@ -4,8 +4,10 @@
 #include <tari/geometry.h>
 
 void loadUserInterface();
+void updateUserInterface();
+void resumeGame();
 
-int addShadow(Position* pos, Position center);
+int addShadow(Position* pos, Position center, double scaleX);
 void removeShadow(int id);
 void setUserInterfaceScreenPositionReference(Position* pos);
 void setHealthBarPercentage(double t);

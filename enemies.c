@@ -475,7 +475,9 @@ void spawnEnemy(int type, Position pos) {
 	enemy->collisionData = makeHittableCollisionData();
 	enemy->collisionID = addColliderToCollisionHandler(getEnemyCollisionListID(), enemy->position, enemyType->col, enemyHitCB, enemy, &enemy->collisionData);
 	enemy->punchCollisionData = enemyType->punchCollisionData;
-	enemy->shadowID = addShadow(&enemy->static128Position, enemyType->center);
+	double shadowScaleX = 1;	
+	if(enemyType->idleTextures[0].mTextureSize.x == 256) shadowScaleX = 3;
+	enemy->shadowID = addShadow(&enemy->static128Position, enemyType->center, shadowScaleX);
 
 	enemy->state = STATE_IDLE;
 	enemy->animationID = playAnimationLoop(makePosition(0,0,0), enemyType->idleTextures, enemyType->idleAnimation, makeRectangleFromTexture(enemyType->idleTextures[0]));

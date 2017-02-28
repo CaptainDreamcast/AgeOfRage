@@ -1,11 +1,14 @@
 #include "userinterface.h"
 
 #include <tari/animation.h>
+#include <tari/input.h>
+#include <tari/wrapper.h>
 
 #include "gamestate.h"
 
 static int UI_Z_BACK = 10;
 static int UI_Z_FRONT = 11;
+static int UI_Z_PAUSE = 12;
 
 static struct {
 	Position* screenPositionReference;
@@ -13,6 +16,10 @@ static struct {
 	TextureData shadowTexture;
 	TextureData healthBackground;
 	TextureData health;
+	TextureData pause;
+	
+	int pauseID;
+
 	int healthID;
 } gData;
 
@@ -30,17 +37,39 @@ void loadUserInterface() {
 	gData.shadowTexture = loadTexture("sprites/SHADOW.pkg");
 	gData.healthBackground = loadTexture("sprites/UI_BACK.pkg");
 	gData.health = loadTexture("sprites/LIFEBAR.pkg");
+	gData.pause = loadTexture("sprites/PAUSE.pkg");
+	gData.pauseID = -1;
 
 	showHealth();
 }
 
-int addShadow(Position* pos, Position center) {
+static void pauseGame() {
+	pauseWrapper();
+	gData.pauseID = playAnimationLoop(makePosition(70, 70, UI_Z_PAUSE), &gData.pause, createOneFrameAnimation(), makeRectangleFromTexture(gData.pause));
+}
+
+void resumeGame() {
+	if(gData.pauseID == -1) return;
+	removeHandledAnimation(gData.pauseID);
+	gData.pauseID = -1;
+	resumeWrapper();
+}
+
+void updateUserInterface() {
+	if(hasPressedStartFlank()) {
+		if(gData.pauseID == -1) pauseGame();
+		else resumeGame();
+	}
+}
+
+int addShadow(Position* pos, Position center, double scaleX) {
 	Position p = makePosition(-(gData.shadowTexture.mTextureSize.x / 2) + 10, 126-(gData.shadowTexture.mTextureSize.y / 2), -1);
 	p = vecAdd(p, center);
 
 	int id = playAnimationLoop(p, &gData.shadowTexture, createOneFrameAnimation(), makeRectangleFromTexture(gData.shadowTexture));
 	setAnimationScreenPositionReference(id, gData.screenPositionReference);
 	setAnimationBasePositionReference(id, pos);
+	setAnimationScale(id, makePosition(scaleX, 1, 1), makePosition(32, 0, 0));
 	return id;
 }
 
@@ -48,6 +77,8 @@ void removeShadow(int id) {
 	removeHandledAnimation(id);
 
 }
+
+
 
 void setUserInterfaceScreenPositionReference(Position* pos) {
 	gData.screenPositionReference = pos;

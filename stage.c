@@ -161,6 +161,20 @@ static void blockingAnimationFinished(void* caller) {
 	gData.isWaitingForAnimation = 0;
 }
 
+static ScriptPosition showAnimation(ScriptPosition pos, int isBlocking) {
+	int id;
+	Position p;
+	gData.scriptPosition = getNextScriptInteger(gData.scriptPosition, &id);
+	gData.scriptPosition = getNextScriptDouble(gData.scriptPosition, &p.x);
+	gData.scriptPosition = getNextScriptDouble(gData.scriptPosition, &p.y);
+	gData.scriptPosition = getNextScriptDouble(gData.scriptPosition, &p.z);
+	StageAnimation* data = list_get(&gData.animations, id);
+	playAnimation(p, data->textures, data->animation, makeRectangleFromTexture(data->textures[0]), blockingAnimationFinished, NULL);
+	gData.isWaitingForAnimation = isBlocking;
+	return pos;
+
+}
+
 static void updateScript() {
 
 	int isActive = 1;
@@ -221,21 +235,17 @@ static void updateScript() {
 			gData.isScrollingRightForced = 0;
 		}  else if(!strcmp("BLOCK_SCROLL", word)) {
 			gData.isBackgroundScrolling = 0;
-		} else if(!strcmp("ANIMATION_BLOCKING", word)) {
-			int id;
-			Position p;
-			gData.scriptPosition = getNextScriptInteger(gData.scriptPosition, &id);
-			gData.scriptPosition = getNextScriptDouble(gData.scriptPosition, &p.x);
-			gData.scriptPosition = getNextScriptDouble(gData.scriptPosition, &p.y);
-			gData.scriptPosition = getNextScriptDouble(gData.scriptPosition, &p.z);
-			StageAnimation* data = list_get(&gData.animations, id);
-			playAnimation(p, data->textures, data->animation, makeRectangleFromTexture(data->textures[0]), blockingAnimationFinished, NULL);
-			gData.isWaitingForAnimation = 1;
-		}  else if(!strcmp("WAIT_DURATION", word)) {
+		} else if(!strcmp("ANIMATION", word)) {
+			pos = showAnimation(pos, 0);
+		}  else if(!strcmp("ANIMATION_BLOCKING", word)) {
+			pos = showAnimation(pos, 1);
+		} else if(!strcmp("WAIT_DURATION", word)) {
 			double duration;
 			gData.scriptPosition = getNextScriptDouble(gData.scriptPosition, &duration);
 			addTimerCB(duration, blockingAnimationFinished, NULL);
 			gData.isWaitingForAnimation = 1;
+		}  else if(!strcmp("CONGRATS", word)) {
+			setGameCleared();
 		} else {
 			logError("Unknown token");
 			logErrorString(word);
@@ -243,6 +253,7 @@ static void updateScript() {
 		}
 
 		
+	
 
 		gData.scriptPosition = getNextScriptInstruction(gData.scriptPosition);
 	}
