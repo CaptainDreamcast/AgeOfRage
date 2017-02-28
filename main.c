@@ -61,7 +61,7 @@ int main() {
 
   resetGameState();
   setCurrentLevelName("level4");
-  startScreenHandling(&GameScreen);
+  startScreenHandling(&TitleScreen);
 
   exitGame();
 

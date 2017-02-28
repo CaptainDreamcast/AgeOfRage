@@ -17,6 +17,7 @@
 #include "collision.h"
 #include "userinterface.h"
 #include "gamestate.h"
+#include "sound.h"
 
 typedef enum {
 	STATE_IDLE, 
@@ -235,6 +236,7 @@ static void playerHitCB(void* tCaller, void* tCollisionData) {
 	if(cData->id == -2) return;
 	cData->id = -2;
 
+	playHitSoundEffect();
 	gData.health -= cData->strength;
 	gData.health = max(0, gData.health);
 	setHealthBarPercentage(gData.health / 1000.0);

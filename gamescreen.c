@@ -17,6 +17,7 @@
 #include "titlescreen.h"
 #include "continuescreen.h"
 #include "congratsscreen.h"
+#include "sound.h"
 
 static void loadGameScreen() {
 	
@@ -34,6 +35,8 @@ static void loadGameScreen() {
 	loadEnemies();
 	setWorkingDirectory("/assets/ui");
 	loadUserInterface();
+	setWorkingDirectory("/assets");
+	loadSound();
 	setWorkingDirectory(levelpath);
 	loadStage();
 		

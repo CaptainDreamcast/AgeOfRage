@@ -22,6 +22,7 @@
 #include "collision.h"
 #include "player.h"
 #include "userinterface.h"
+#include "sound.h"
 
 typedef enum {
 
@@ -429,7 +430,7 @@ static void enemyHitCB(void* tCaller, void* tCollisionData) {
 
 	if(enemy->getHitFromID == cData->id) return;
 
-	
+	if(enemy->state != STATE_DEATH) playHitSoundEffect();	
 
 	enemy->getHitFromID = cData->id;
 	enemy->health -= cData->strength;

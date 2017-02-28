@@ -1,20 +1,20 @@
 TARGET = 1ST_READ
 OBJS = main.o \
 romdisk.o gamescreen.o system.o stage.o enemies.o player.o collision.o userinterface.o gamestate.o \
-continuescreen.o titlescreen.o congratsscreen.o gameoverscreen.o
+continuescreen.o titlescreen.o congratsscreen.o gameoverscreen.o sound.o
 OPTFLAGS=-O3 -fomit-frame-pointer -fno-delayed-branch -DDREAMCAST -Wall -Werror
 DEVELOP_CFLAGS= $(OPTFLAGS) -DDEVELOP
 DEPLOY_CFLAGS= $(OPTFLAGS)
-KOS_CFLAGS+= $(OPTFLAGS)
+KOS_CFLAGS+= $(OPTFLAGS) 
 KOS_ROMDISK_DIR = romdisk_boot
 
 #all: $(TARGET).elf #problematic when working with libtari
 
 all: complete
 
-complete: clean build_images develop_build
+complete: clean build_images build
 
-deploy: clean build_images to_romdisk deploy_build
+deploy: clean build_images to_romdisk build
 
 
 build_images: copy_debug genlevels
@@ -51,14 +51,8 @@ clean:
 	-rm -r -f filesystem
 	-rm -f romdisk.img
 
-develop_build: $(OBJS) 
-	$(KOS_CC) $(KOS_CFLAGS) $(DEVELOP_CFLAGS) -I${KOS_BASE}/../extensions/include $(KOS_LDFLAGS) \
-	-o $(TARGET).elf $(KOS_START) \
-	$(OBJS) -lkmg $(OPTIONAL_LIBS) -lm -ltremor -ltari $(OBJEXTRA) $(KOS_LIBS)
-	$(KOS_OBJCOPY) -O binary $(TARGET).elf $(TARGET).BIN
-
-deploy_build: $(OBJS) 
-	$(KOS_CC) $(KOS_CFLAGS) $(DEPLOY_CFLAGS) -I${KOS_BASE}/../extensions/include $(KOS_LDFLAGS) \
+build: $(OBJS) 
+	$(KOS_CC) $(KOS_CFLAGS) -I${KOS_BASE}/../extensions/include $(KOS_LDFLAGS) \
 	-o $(TARGET).elf $(KOS_START) \
 	$(OBJS) -lkmg $(OPTIONAL_LIBS) -lm -ltremor -ltari $(OBJEXTRA) $(KOS_LIBS)
 	$(KOS_OBJCOPY) -O binary $(TARGET).elf $(TARGET).BIN

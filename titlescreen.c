@@ -10,6 +10,7 @@
 #include "gamestate.h"
 #include "gamescreen.h"
 #include "titlescreen.h"
+#include "sound.h"
 
 static struct {
 
@@ -79,6 +80,7 @@ static void loadTitleScreen() {
 	gData.whichEnemy = 0;
 	gData.whichEnemyAnimation = 0;
 
+	loadSound();
 }
 
 
@@ -90,6 +92,7 @@ static void unloadTitleScreen() {
 static void punchHasConnected(void* caller) {
 	gData.whichEnemyAnimation = 1;
 	changeAnimation(gData.enemyID, gData.enemy[gData.whichEnemy][gData.whichEnemyAnimation], gData.enemyAnimation[gData.whichEnemy][gData.whichEnemyAnimation], makeRectangleFromTexture(gData.enemy[gData.whichEnemy][gData.whichEnemyAnimation][0]));
+	playHitSoundEffect();
 }
 
 static void playerAnimationFinished(void* caller) {
