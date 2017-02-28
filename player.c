@@ -67,6 +67,7 @@ static struct {
 	int direction;
 	
 	int comboState;
+	int isFrozen;
 
 	Collider collider;
 	CollisionData collisionData;
@@ -167,6 +168,7 @@ void loadPlayer() {
 	gData.collisionID = addColliderToCollisionHandler(getPlayerCollisionListID(), gData.mPosition, gData.collider, playerHitCB, NULL, &gData.collisionData);
 	gData.collisionAnimationID = -1;
 	gData.comboState = 0;
+	gData.isFrozen = 0;
 
 	gData.weakPunchCollisionData = makePunchCollisionData(50, makePosition(0,0,0));	
 	gData.strongPunchCollisionData = makePunchCollisionData(100, makePosition(0,0,0));	
@@ -345,10 +347,13 @@ static void checkPunch()  {
 }
 
 void updatePlayer() {
+	adjustZ(gData.mPosition);
 	checkInverted();
+	
+	if(gData.isFrozen) return;
 	checkMovement();
 	checkPunch();
-	adjustZ(gData.mPosition);
+	
 }
 
 
@@ -363,4 +368,13 @@ void setPlayerScreenPositionReference(Position* p) {
 
 int getPlayerHealth() {
 	return gData.health;
+}
+
+void freezePlayer() {
+	gData.isFrozen = 1;
+	setIdle();
+}
+
+void unfreezePlayer() {
+	gData.isFrozen = 0;
 }

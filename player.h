@@ -6,6 +6,8 @@
 void loadPlayer();
 void addPlayerShadow();
 void updatePlayer();
+void freezePlayer();
+void unfreezePlayer();
 
 Position getPlayerPosition();
 void setPlayerScreenPositionReference(Position* p);

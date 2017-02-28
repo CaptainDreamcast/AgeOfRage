@@ -61,7 +61,6 @@ typedef struct {
 	Position center;
 	double speed;
 
-
 } EnemyType;
 
 typedef struct {
@@ -97,6 +96,8 @@ static struct {
 	Vector enemyTypes;
 	List activeEnemies;
 	Position* screenPositionReference;
+
+	int areFrozen;
 } gData;
 
 static ScriptPosition loadSingleEnemyTypeAnimation(ScriptPosition pos, Animation* animation, TextureData* textureData) {
@@ -210,6 +211,8 @@ static void loadEnemyTypes() {
 void loadEnemies() {
 	gData.enemyTypes = new_vector();
 	gData.activeEnemies = new_list();
+
+	gData.areFrozen = 0;
 
 	loadEnemyTypes();
 }
@@ -352,9 +355,12 @@ static void updatePositionConstraints(ActiveEnemy* enemy) {
 static void updateSingleEnemy(void* caller, void* data) {
 	(void) caller;
 	ActiveEnemy* enemy = data;
+	updatePositionConstraints(enemy);	
+	if(gData.areFrozen) return;
+
 	checkRandomWalk(enemy);
 	checkPunch(enemy); 
-	updatePositionConstraints(enemy);
+	
 }
 
 void updateEnemies() {
@@ -465,10 +471,22 @@ void spawnEnemy(int type, Position pos) {
 	setAnimationScreenPositionReference(enemy->animationID, gData.screenPositionReference);
 	setAnimationCenter(enemy->animationID, enemyType->center);
 
+	Position playerPosition = getPlayerPosition();
+	if(playerPosition.x < enemy->position->x) invert(enemy);
+
 	enemy->id = list_push_front_owned(&gData.activeEnemies, enemy);
 }
 
 void setEnemiesScreenPositionReference(Position* p) {
 	gData.screenPositionReference = p;
+}
+
+
+void freezeEnemies() {
+	gData.areFrozen = 1;
+}
+
+void unfreezeEnemies() {
+	gData.areFrozen = 0;
 }
 

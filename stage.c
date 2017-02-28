@@ -9,12 +9,20 @@
 #include <tari/log.h>
 #include <tari/system.h>
 #include <tari/collisionhandler.h>
+#include <tari/memoryhandler.h>
+#include <tari/datastructures.h>
+#include <tari/timer.h>
 
 #include "enemies.h"
 #include "player.h"
 #include "userinterface.h"
 #include "gamestate.h"
 #include "system.h"
+
+typedef struct  {
+	TextureData* textures;
+	Animation animation;
+} StageAnimation;
 
 static struct {
 	Script script;
@@ -25,12 +33,44 @@ static struct {
 	int groundID;
 
 	int isWaitingForDefeat;
+	int isWaitingForAnimation;
 	int isBackgroundScrolling;
 
 	int isOver;
 	Position* screenPosition;
 
+	int isScrollingRightForced;
+
+	List animations;
+
 } gData;
+
+static ScriptPosition loadStageAnimation(ScriptPosition position) {
+	int frameAmount;
+	
+	Animation animation = createEmptyAnimation();
+	position = getNextScriptInteger(position, &frameAmount);
+	position = getNextScriptDouble(position, &animation.mDuration);
+	animation.mFrameAmount = frameAmount;
+
+	StageAnimation* e = allocMemory(sizeof(StageAnimation));
+	e->animation = animation;
+	e->textures = allocMemory(sizeof(TextureData)*frameAmount);
+
+	int i;
+	for(i = 0; i < frameAmount; i++) {
+		char name[100], path[100];
+
+		position = getNextScriptString(position, name);
+		sprintf(path, "sprites/%s", name);
+		e->textures[i] = loadTexture(path);
+	}
+	
+
+	list_push_front_owned(&gData.animations, e);	
+
+	return position;	
+}
 
 static ScriptPosition loadBackgroundElementWithoutAnimation(ScriptPosition position, char* path, Position* texturePosition) {	
 	char name[100];
@@ -77,7 +117,9 @@ static ScriptPosition loader(void* caller, ScriptPosition position) {
 		position = loadBackgroundElementAnimation(position, &animation);
 		
 		addBackgroundElement(gData.backgroundID2, texturePosition, path, animation);
-	}   else {
+	} else if(!strcmp(word, "ANIMATION")) {
+		position = loadStageAnimation(position);
+	} else {
 		logError("Unrecognized token.");
 		logErrorString(word);
 		abortSystem();
@@ -93,6 +135,10 @@ void loadStage() {
 
 	gData.isWaitingForDefeat = 0;
 	gData.isBackgroundScrolling = 1;
+	gData.isScrollingRightForced = 0;
+	gData.isWaitingForAnimation = 0;
+
+	gData.animations = new_list();
 
 	gData.isOver = 0;
 	gData.screenPosition = getScrollingBackgroundPositionReference(gData.groundID);
@@ -111,6 +157,10 @@ void loadStage() {
 	setCollisionHandlerDebuggingScreenPositionReference(p);
 }
 
+static void blockingAnimationFinished(void* caller) {
+	gData.isWaitingForAnimation = 0;
+}
+
 static void updateScript() {
 
 	int isActive = 1;
@@ -123,6 +173,8 @@ static void updateScript() {
 			gData.isWaitingForDefeat = 0;
 			gData.isBackgroundScrolling = 1;
 		}
+
+		if(gData.isWaitingForAnimation) return;
 
 		if(!hasNextScriptWord(gData.scriptPosition)) {
 			gData.isOver = 1;
@@ -155,6 +207,39 @@ static void updateScript() {
 			char name[100];
 			gData.scriptPosition = getNextScriptString(gData.scriptPosition, name);
 			setCurrentLevelName(name);
+		}  else if(!strcmp("FREEZE_PLAYER", word)) {
+			freezePlayer();
+		} else if(!strcmp("UNFREEZE_PLAYER", word)) {
+			unfreezePlayer();
+		} else if(!strcmp("FREEZE_ENEMY", word)) {
+			freezeEnemies();
+		} else if(!strcmp("UNFREEZE_ENEMY", word)) {
+			unfreezeEnemies();
+		} else if(!strcmp("SCROLL_SCREEN_RIGHT", word)) {
+			gData.isScrollingRightForced = 1;
+		} else if(!strcmp("STOP_SCROLL", word)) {
+			gData.isScrollingRightForced = 0;
+		}  else if(!strcmp("BLOCK_SCROLL", word)) {
+			gData.isBackgroundScrolling = 0;
+		} else if(!strcmp("ANIMATION_BLOCKING", word)) {
+			int id;
+			Position p;
+			gData.scriptPosition = getNextScriptInteger(gData.scriptPosition, &id);
+			gData.scriptPosition = getNextScriptDouble(gData.scriptPosition, &p.x);
+			gData.scriptPosition = getNextScriptDouble(gData.scriptPosition, &p.y);
+			gData.scriptPosition = getNextScriptDouble(gData.scriptPosition, &p.z);
+			StageAnimation* data = list_get(&gData.animations, id);
+			playAnimation(p, data->textures, data->animation, makeRectangleFromTexture(data->textures[0]), blockingAnimationFinished, NULL);
+			gData.isWaitingForAnimation = 1;
+		}  else if(!strcmp("WAIT_DURATION", word)) {
+			double duration;
+			gData.scriptPosition = getNextScriptDouble(gData.scriptPosition, &duration);
+			addTimerCB(duration, blockingAnimationFinished, NULL);
+			gData.isWaitingForAnimation = 1;
+		} else {
+			logError("Unknown token");
+			logErrorString(word);
+			abortSystem();
 		}
 
 		
@@ -164,10 +249,10 @@ static void updateScript() {
 }
 
 static void updateStageMovement() {
-	if(!gData.isBackgroundScrolling) return;
+	if(!gData.isScrollingRightForced && !gData.isBackgroundScrolling) return;
 
 	Position p = getRealScreenPosition(gData.groundID, getPlayerPosition());
-	if(p.x >= 175) {
+	if(gData.isScrollingRightForced || p.x >= 175) {
 		scrollBackgroundRight(0.25);
 	}
 }
