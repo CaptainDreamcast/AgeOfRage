@@ -1,2 +1,2 @@
-# AgeOfRage
-Age of Rage. Beat-'em-up game for Sega Dreamcast.
+# Fists of Justice
+Fists of Justice. Beat-'em-up game for Sega Dreamcast.
