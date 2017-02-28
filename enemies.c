@@ -61,6 +61,8 @@ typedef struct {
 	Position center;
 	double speed;
 
+	int hasFallThroughDeath;
+
 } EnemyType;
 
 typedef struct {
@@ -168,6 +170,8 @@ static ScriptPosition loadSingleEnemyType(void* caller, ScriptPosition pos) {
 		enemyType->center.z = 0;
 	}  else if(!strcmp(word, "SPEED")) {
 		pos = getNextScriptDouble(pos, &enemyType->speed);
+	} else if(!strcmp(word, "FALL_THROUGH_DEATH")) {
+		enemyType->hasFallThroughDeath = 1;
 	} else {
 		logError("Unrecognized token");
 		logErrorString(word);
@@ -186,6 +190,7 @@ static ScriptPosition loader(void* caller, ScriptPosition pos) {
 	if(!strcmp(word, "ENEMY_TYPE")) {
 		ScriptRegion enemyRegion = getScriptRegionAtPosition(pos);
 		EnemyType* enemyType = allocMemory(sizeof(EnemyType));
+		enemyType->hasFallThroughDeath = 0;
 		executeOnScriptRegion(enemyRegion, loadSingleEnemyType, enemyType);
 		vector_push_back_owned(&gData.enemyTypes, enemyType);
 		pos = getPositionAfterScriptRegion(pos.mRegion, enemyRegion);
@@ -248,8 +253,6 @@ static void checkStartRandomWalk(ActiveEnemy* enemy) {
 	Position totalDelta = vecAdd(targetDelta, vecScale(playerDelta, 10));
 
 	enemy->target = vecAdd(enemy->static128Position, totalDelta);
-	constraintIntoLevel(&enemy->target, gData.screenPositionReference);
-
 
 	setWalking(enemy);
 }
@@ -349,7 +352,8 @@ static void updatePositionConstraints(ActiveEnemy* enemy) {
 	enemy->static128Position.y += enemyType->idleTextures[0].mTextureSize.y - 128;
 	adjustZ(&enemy->static128Position);
 	enemy->position->z = enemy->static128Position.z;
-	
+
+	constraintIntoLevel(&enemy->target, gData.screenPositionReference);	
 }
 
 static void updateSingleEnemy(void* caller, void* data) {
@@ -395,6 +399,14 @@ static void die(ActiveEnemy* enemy) {
 
 	changeAnimation(enemy->animationID, enemyType->deathTextures, enemyType->deathAnimation, makeRectangleFromTexture(enemyType->deathTextures[0]));
 	setAnimationCB(enemy->animationID, dyingOver, enemy);
+
+	if(enemyType->hasFallThroughDeath) {
+		setHandledPhysicsGravity(enemy->physicsID, makePosition(0, 1, 0));
+		setHandledPhysicsMaxVelocity(enemy->physicsID, INF);
+		setHandledPhysicsDragCoefficient(enemy->physicsID, makePosition(0,0,0));
+		addAccelerationToHandledPhysics(enemy->physicsID, makePosition(0, -10, 0));
+	}
+
 	enemy->state = STATE_DEATH;
 }
 

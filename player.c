@@ -34,6 +34,8 @@ static struct {
 	Velocity* mVelocity;
 	Position mCenter;
 
+	Position* screenPositionReference;
+
 	Animation idleAnimation;
 	TextureData idleTextures[10];
 
@@ -169,6 +171,8 @@ void loadPlayer() {
 	gData.collisionAnimationID = -1;
 	gData.comboState = 0;
 	gData.isFrozen = 0;
+
+	gData.screenPositionReference = NULL;
 
 	gData.weakPunchCollisionData = makePunchCollisionData(50, makePosition(0,0,0));	
 	gData.strongPunchCollisionData = makePunchCollisionData(100, makePosition(0,0,0));	
@@ -329,6 +333,10 @@ static void setPunch(State state, TextureData* textures, Animation animation, Co
 }
 
 static void setStrongPunch() {
+	if(gData.state == STATE_WEAK_PUNCH) {
+		removeHandledCollisionAnimation(gData.collisionAnimationID);
+		punchFinished(NULL);
+	}
 	setPunch(STATE_STRONG_PUNCH, gData.strongPunchTextures, gData.strongPunchAnimation, gData.strongPunchCollisionAnimation, &gData.strongPunchCollisionData);
 }
 
@@ -338,11 +346,11 @@ static void setWeakPunch() {
 }
 
 static void checkPunch()  {
-	if(gData.state != STATE_IDLE && gData.state != STATE_WALKING) return;
+	if(gData.state != STATE_IDLE && gData.state != STATE_WALKING && gData.state != STATE_WEAK_PUNCH) return;
 
 	if(hasPressedXFlank()) {
 		if(gData.comboState) setStrongPunch();
-		else setWeakPunch();
+		else if(gData.state == STATE_IDLE || gData.state == STATE_WALKING) setWeakPunch();
 	}
 }
 
@@ -351,12 +359,11 @@ void updatePlayer() {
 	checkInverted();
 	
 	if(gData.isFrozen) return;
+	constraintIntoLevel(gData.mPosition, gData.screenPositionReference);
 	checkMovement();
 	checkPunch();
 	
 }
-
-
 
 Position getPlayerPosition() {
 	return *gData.mPosition;
@@ -364,6 +371,7 @@ Position getPlayerPosition() {
 
 void setPlayerScreenPositionReference(Position* p) {
 	setAnimationScreenPositionReference(gData.animationID, p);
+	gData.screenPositionReference = p;
 }
 
 int getPlayerHealth() {
