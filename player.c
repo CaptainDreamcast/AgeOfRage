@@ -1,5 +1,7 @@
 #include "player.h"
 
+#include <stdlib.h>
+
 #include <tari/system.h>
 #include <tari/log.h>
 #include <tari/animation.h>

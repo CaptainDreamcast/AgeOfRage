@@ -1,6 +1,7 @@
 #include "collision.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <tari/collisionhandler.h>
 #include <tari/math.h>
