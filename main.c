@@ -1,5 +1,3 @@
-#include <kos.h> 
-
 #include <tari/framerateselectscreen.h>
 #include <tari/pvr.h>
 #include <tari/physics.h>
@@ -18,20 +16,23 @@
 #include "system.h"
 #include "logoscreen.h"
 
+#ifdef DREAMCAST
 KOS_INIT_FLAGS(INIT_DEFAULT);
 
 extern uint8 romdisk[];
 KOS_INIT_ROMDISK(romdisk);
+#endif
 
-uint32_t useRomDisk = 1;
 
 void exitGame() {
   shutdownTariWrapper();
 
+#define DEVELOP
+
 #ifdef DEVELOP
-  arch_exit();
+  abortSystem();
 #else
-  arch_menu();
+  returnToMenu();
 #endif
 }
 
@@ -45,13 +46,19 @@ void setMainFileSystem() {
 	resetToGameBaseFileSystem();
 }
 
-int main() {
+// TODO: find out why main doesn't work
+int wmain(int argc, char** argv) {
+	return main(argc, argv);
+}
 
+int main(int argc, char** argv) {
+
+  setGameName("Fists of Justice");
   setScreenSize(320, 240);
 
   initTariWrapperWithDefaultFlags();
 
-  log("Check framerate");
+  logg("Check framerate");
   FramerateSelectReturnType framerateReturnType = selectFramerate();
   if (framerateReturnType == FRAMERATE_SCREEN_RETURN_ABORT) {
     exitGame();
