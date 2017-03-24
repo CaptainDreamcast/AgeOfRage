@@ -107,6 +107,11 @@
       </PreventDllBinding>
       <GenerateDebugInformation>No</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y DLL\*  Release
+xcopy /E /I /Y ..\assets  Release\assets
+xcopy /E /I /Y ..\assets\fonts Release\fonts</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
