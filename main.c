@@ -46,11 +46,6 @@ void setMainFileSystem() {
 	resetToGameBaseFileSystem();
 }
 
-// TODO: find out why main doesn't work
-int wmain(int argc, char** argv) {
-	return main(argc, argv);
-}
-
 int main(int argc, char** argv) {
 
   setGameName("FISTS OF JUSTICE");
@@ -76,3 +71,11 @@ int main(int argc, char** argv) {
 
   return (1);
 }
+
+
+// TODO: find out why main doesn't work
+int wmain(int argc, char** argv) {
+	return main(argc, argv);
+}
+
+

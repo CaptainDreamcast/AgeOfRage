@@ -1,5 +1,7 @@
 #include "enemies.h"
 
+#include <math.h>
+
 #include <tari/datastructures.h>
 #include <tari/animation.h>
 #include <tari/texture.h>
