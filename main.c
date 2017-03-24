@@ -53,7 +53,7 @@ int wmain(int argc, char** argv) {
 
 int main(int argc, char** argv) {
 
-  setGameName("Fists of Justice");
+  setGameName("FISTS OF JUSTICE");
   setScreenSize(320, 240);
 
   initTariWrapperWithDefaultFlags();
