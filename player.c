@@ -1,5 +1,7 @@
 #include "player.h"
 
+#include <stdlib.h>
+
 #include <tari/system.h>
 #include <tari/log.h>
 #include <tari/animation.h>
@@ -97,7 +99,7 @@ static ScriptPosition loadTextureDataAndAnimation(ScriptPosition position, Textu
 	position = getNextScriptString(position, name);
 
 	int i;
-	for(i = 0; i < animation->mFrameAmount; i++) {
+	for(i = 0; i < (int)animation->mFrameAmount; i++) {
 		sprintf(path, "sprites/%s%d.pkg", name, i);
 		textureData[i] = loadTexture(path);
 	}

@@ -1,5 +1,6 @@
 #include "titlescreen.h"
 
+#include <stdio.h>
 
 #include <tari/file.h>
 #include <tari/texture.h>

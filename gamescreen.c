@@ -7,6 +7,8 @@
 #include <tari/memoryhandler.h>
 #include <tari/collisionhandler.h>
 
+#include <stdio.h>
+
 #include "system.h"
 #include "stage.h"
 #include "player.h"

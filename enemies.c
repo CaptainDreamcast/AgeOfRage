@@ -112,7 +112,7 @@ static ScriptPosition loadSingleEnemyTypeAnimation(ScriptPosition pos, Animation
 	animation->mDuration = v;
 	
 	int i;
-	for(i = 0; i < animation->mFrameAmount; i++) {
+	for(i = 0; i < (int)animation->mFrameAmount; i++) {
 		char file[100];
 		char path[100];
 		pos = getNextScriptString(pos, file);
