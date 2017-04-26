@@ -86,7 +86,7 @@ void setUserInterfaceScreenPositionReference(Position* pos) {
 
 
 void setHealthBarPercentage(double t) {
-	double sizeX = 86*t;
+	double sizeX = 82*t;
 	setAnimationScale(gData.healthID, makePosition(sizeX / 16.0, 8 / 16.0, 1), makePosition(0,0,0));
 }
 
