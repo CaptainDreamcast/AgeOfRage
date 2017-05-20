@@ -108,7 +108,7 @@
       <GenerateDebugInformation>No</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y DLL\*  Release
+      <Command>copy /Y ..\..\addons\libtari\windows\vs15\DLL\* Release
 xcopy /E /I /Y ..\assets  Release\assets
 xcopy /E /I /Y ..\assets\fonts Release\fonts</Command>
     </PostBuildEvent>
