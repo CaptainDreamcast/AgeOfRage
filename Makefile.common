@@ -1,0 +1,4 @@
+OBJS = main.o \
+gamescreen.o system.o stage.o enemies.o player.o collision.o userinterface.o gamestate.o \
+continuescreen.o titlescreen.o congratsscreen.o gameoverscreen.o sound.o logoscreen.o 
+OUTPUT_FILE_NAME = FistsOfJustice

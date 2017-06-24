@@ -1,7 +1,6 @@
 TARGET = 1ST_READ
-OBJS = main.o \
-romdisk.o gamescreen.o system.o stage.o enemies.o player.o collision.o userinterface.o gamestate.o \
-continuescreen.o titlescreen.o congratsscreen.o gameoverscreen.o sound.o logoscreen.o
+include Makefile.common
+OBJS = $(OBJS) romdisk.o 
 OPTFLAGS=-O3 -fomit-frame-pointer -fno-delayed-branch -DDREAMCAST -Wall -Werror
 DEVELOP_CFLAGS= $(OPTFLAGS) -DDEVELOP
 DEPLOY_CFLAGS= $(OPTFLAGS)
