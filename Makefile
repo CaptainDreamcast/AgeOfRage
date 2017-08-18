@@ -1,6 +1,6 @@
 TARGET = 1ST_READ
 include Makefile.common
-OBJS = $(OBJS) romdisk.o 
+OBJS += romdisk.o 
 OPTFLAGS=-O3 -fomit-frame-pointer -fno-delayed-branch -DDREAMCAST -Wall -Werror
 DEVELOP_CFLAGS= $(OPTFLAGS) -DDEVELOP
 DEPLOY_CFLAGS= $(OPTFLAGS)
